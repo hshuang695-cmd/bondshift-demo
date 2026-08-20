@@ -1,21 +1,32 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Eye, Shuffle } from 'lucide-react';
+import { MessageCircle, Shuffle } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import { useBoyfriendStore } from '../stores';
 import { recordInteraction } from '../core/bondshiftEngine';
 import { getAvatarByArchetype, getTypeEmoji } from '../core/avatarEngine';
 import { boyfriends } from '../data';
 import { TRAIT_LABELS } from '../utils/constants';
+import type { BoyfriendTypeId } from '../types';
 
-function AvatarImg({ typeId, className }: { typeId: string; className?: string }) {
-  const avatar = getAvatarByArchetype(typeId as any);
+function AvatarImg({
+  typeId,
+  className,
+  loading = 'eager',
+}: {
+  typeId: BoyfriendTypeId;
+  className?: string;
+  loading?: 'eager' | 'lazy';
+}) {
+  const avatar = getAvatarByArchetype(typeId);
   return (
     <img
       src={avatar.primary}
       alt={typeId}
       className={className}
+      loading={loading}
+      decoding="async"
       onError={(e) => {
         const el = e.currentTarget;
         if (el.src === avatar.primary) {
@@ -50,8 +61,6 @@ export default function HomePage() {
 
   const quickActions = [
     { icon: MessageCircle, label: '聊天', color: 'text-accent-500', bg: 'bg-accent-50', path: `/chat/${bf.id}` },
-    { icon: Phone, label: '语音', color: 'text-brand-500', bg: 'bg-brand-50', path: `/voice/${bf.id}` },
-    { icon: Eye, label: 'VR', color: 'text-warm-500', bg: 'bg-warm-50', path: '/vr' },
     { icon: Shuffle, label: '换乘', color: 'text-accent-500', bg: 'bg-accent-50', path: '/swap' },
   ];
 
@@ -167,7 +176,7 @@ export default function HomePage() {
         <p className="text-xs text-text-secondary font-semibold mb-3 uppercase tracking-wider">
           快捷操作
         </p>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {quickActions.map((action, i) => (
             <motion.button
               key={action.label}
@@ -176,9 +185,7 @@ export default function HomePage() {
               transition={{ delay: 0.1 + i * 0.04 }}
               whileTap={{ scale: 0.92 }}
               onClick={() => {
-                if (action.label === '聊天' || action.label === '语音') {
-                  recordInteraction(action.label === '聊天' ? 'chat' : 'voice_call');
-                }
+                if (action.label === '聊天') recordInteraction('chat');
                 navigate(action.path);
               }}
               className="flex flex-col items-center gap-2"
@@ -210,7 +217,7 @@ export default function HomePage() {
               className="flex-shrink-0 w-[100px] card p-3 text-center"
             >
               <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center mx-auto mb-2 overflow-hidden">
-                <AvatarImg typeId={b.typeId} className="w-full h-full object-cover" />
+                <AvatarImg typeId={b.typeId} className="w-full h-full object-cover" loading="lazy" />
                 <span className="text-xl" style={{ display: 'none' }}>{getTypeEmoji(b.typeId)}</span>
               </div>
               <p className="text-xs font-semibold text-text-primary truncate">{b.name}</p>

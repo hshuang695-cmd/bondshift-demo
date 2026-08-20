@@ -10,12 +10,12 @@ import type { BoyfriendProfile } from '../types';
 // ══════════════════════════════════════════════
 
 const AVATAR_IMAGE_MAP: Record<BoyfriendTypeId, string> = {
-  puppy: '/avatars/golden_retriever.png',
-  gentleman: '/avatars/mature_gentleman.png',
-  artist: '/avatars/artist.png',
-  ceo: '/avatars/cold_ceo.png',
-  childhood: '/avatars/childhood_friend.png',
-  senior: '/avatars/cold_senior.png',
+  puppy: '/avatars-optimized/golden_retriever.jpg',
+  gentleman: '/avatars-optimized/mature_gentleman.jpg',
+  artist: '/avatars-optimized/artist.jpg',
+  ceo: '/avatars-optimized/cold_ceo.jpg',
+  childhood: '/avatars-optimized/childhood_friend.jpg',
+  senior: '/avatars-optimized/cold_senior.jpg',
 };
 
 // DiceBear fallback URL (本地图片加载失败时使用)
@@ -143,6 +143,7 @@ export function getTypeEmoji(typeId: BoyfriendTypeId): string {
 }
 
 /** 兼容旧 API：返回图片 URL（优先本地） */
-export function getAvatarUrl(typeId: BoyfriendTypeId, _personality?: unknown, _stage?: unknown, _size?: number): string {
+export function getAvatarUrl(typeId: BoyfriendTypeId, ...legacyArgs: unknown[]): string {
+  void legacyArgs;
   return AVATAR_IMAGE_MAP[typeId] ?? AVATAR_IMAGE_MAP.puppy;
 }

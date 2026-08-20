@@ -2,7 +2,7 @@
 // 职责: 将关键 store 状态序列化到 localStorage，支持断电恢复
 // 所有页面不直接调用此引擎 —— 由 productBootstrap 统一调度
 
-import type { BoyfriendProfile } from '../types';
+import type { BoyfriendProfile, ChatMessage } from '../types';
 import type { BoyfriendPersonality } from './personalityEngine';
 import type { InteractionRecord } from './evolutionEngine';
 import type { RelationshipScores } from './relationshipEngine';
@@ -14,10 +14,15 @@ import type { UserMemory } from './memoryEngine';
 // ══════════════════════════════════════════════
 
 const STORAGE_KEY = 'bondshift_state_v1';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
+
+export interface PersistedChatState {
+  messages: ChatMessage[];
+  memoriesByBoyfriend: Record<string, UserMemory>;
+}
 
 interface PersistedState {
-  version: number;
+  version: typeof STORAGE_VERSION;
   savedAt: number;
   boyfriend: {
     currentBoyfriend: BoyfriendProfile | null;
@@ -30,6 +35,11 @@ interface PersistedState {
     swapHistory: SwapRecord[];
     totalSwapCount: number;
   };
+  chat: PersistedChatState;
+}
+
+interface LegacyPersistedState extends Omit<PersistedState, 'version' | 'chat'> {
+  version: 1;
   memory: UserMemory | null;
 }
 
@@ -40,7 +50,7 @@ interface PersistedState {
 export interface SaveInput {
   boyfriend: PersistedState['boyfriend'];
   swap: PersistedState['swap'];
-  memory: UserMemory | null;
+  chat: PersistedChatState;
 }
 
 /** 将关系状态序列化并保存到 localStorage */
@@ -51,7 +61,7 @@ export function saveRelationshipState(input: SaveInput): boolean {
       savedAt: Date.now(),
       boyfriend: input.boyfriend,
       swap: input.swap,
-      memory: input.memory,
+      chat: input.chat,
     };
 
     const json = JSON.stringify(state);
@@ -82,12 +92,29 @@ export function loadRelationshipState(): LoadResult {
       return { found: false, state: null, savedAt: 0, age: 0 };
     }
 
-    const state: PersistedState = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as PersistedState | LegacyPersistedState;
 
     // 版本检查
-    if (!state.version || state.version < STORAGE_VERSION) {
+    if (!parsed.version) {
       return { found: false, state: null, savedAt: 0, age: 0 };
     }
+
+    // v1只保存一份全局记忆，将它迁移给当时的当前男友
+    const state: PersistedState = parsed.version === 1
+      ? {
+          version: STORAGE_VERSION,
+          savedAt: parsed.savedAt,
+          boyfriend: parsed.boyfriend,
+          swap: parsed.swap,
+          chat: {
+            messages: [],
+            memoriesByBoyfriend:
+              parsed.memory && parsed.boyfriend.currentBoyfriend
+                ? { [parsed.boyfriend.currentBoyfriend.id]: parsed.memory }
+                : {},
+          },
+        }
+      : parsed;
 
     const age = Date.now() - state.savedAt;
     return { found: true, state, savedAt: state.savedAt, age };
@@ -105,7 +132,7 @@ export interface RecoverResult {
   recovered: boolean;
   boyfriendState: PersistedState['boyfriend'] | null;
   swapState: PersistedState['swap'] | null;
-  memory: UserMemory | null;
+  chatState: PersistedChatState | null;
 }
 
 /** 尝试恢复男友关系状态 */
@@ -113,21 +140,21 @@ export function recoverBoyfriendState(): RecoverResult {
   const result = loadRelationshipState();
 
   if (!result.found || !result.state) {
-    return { recovered: false, boyfriendState: null, swapState: null, memory: null };
+    return { recovered: false, boyfriendState: null, swapState: null, chatState: null };
   }
 
   const state = result.state;
 
   // 检查数据完整性
   if (!state.boyfriend || !state.swap) {
-    return { recovered: false, boyfriendState: null, swapState: null, memory: null };
+    return { recovered: false, boyfriendState: null, swapState: null, chatState: null };
   }
 
   return {
     recovered: true,
     boyfriendState: state.boyfriend,
     swapState: state.swap,
-    memory: state.memory,
+    chatState: state.chat,
   };
 }
 

@@ -6,16 +6,27 @@ import { useSwapStore, useBoyfriendStore } from '../stores';
 import { swapBoyfriend } from '../core/bondshiftEngine';
 import { getAvatarByArchetype, getTypeEmoji } from '../core/avatarEngine';
 import { boyfriends } from '../data';
+import type { BoyfriendTypeId } from '../types';
 
 const reasons = ['想试试不同的性格', '当前匹配度不够', '好奇其它类型', '想体验新鲜感'];
 
-function AvatarImg({ typeId, className }: { typeId: string; className?: string }) {
-  const avatar = getAvatarByArchetype(typeId as any);
+function AvatarImg({
+  typeId,
+  className,
+  loading = 'eager',
+}: {
+  typeId: BoyfriendTypeId;
+  className?: string;
+  loading?: 'eager' | 'lazy';
+}) {
+  const avatar = getAvatarByArchetype(typeId);
   return (
     <img
       src={avatar.primary}
       alt={typeId}
       className={className}
+      loading={loading}
+      decoding="async"
       onError={(e) => {
         const el = e.currentTarget;
         if (el.src === avatar.primary) {
@@ -111,7 +122,7 @@ export default function SwapPage() {
                 }`}
               >
                 <div className="w-14 h-14 rounded-2xl bg-surface-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  <AvatarImg typeId={bf.typeId} className="w-full h-full object-cover" />
+                  <AvatarImg typeId={bf.typeId} className="w-full h-full object-cover" loading="lazy" />
                   <span className="text-2xl" style={{ display: 'none' }}>{getTypeEmoji(bf.typeId)}</span>
                 </div>
                 <div className="min-w-0 flex-1 text-left">
@@ -130,9 +141,7 @@ export default function SwapPage() {
                     <Heart size={12} className="text-brand-500" fill="#e8547c" />
                     <span className="text-sm font-bold text-brand-500">{bf.compatibility.baseScore}%</span>
                   </div>
-                  <span className="text-[10px] text-text-tertiary">
-                    {bf.popularity > 1000 ? `${(bf.popularity / 1000).toFixed(1)}k` : bf.popularity} 人已换
-                  </span>
+                  <span className="text-[10px] text-text-tertiary">推荐匹配</span>
                 </div>
               </motion.button>
             );

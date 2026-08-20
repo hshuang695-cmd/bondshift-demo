@@ -5,7 +5,7 @@
 import type { BoyfriendPersonality } from './personalityEngine';
 import type { InteractionRecord } from './evolutionEngine';
 import type { RelationshipScores } from './relationshipEngine';
-import type { UserMemory } from './memoryEngine';
+import type { PersistedChatState } from './persistenceEngine';
 
 // ─── 持久化引擎 ───
 import {
@@ -80,7 +80,7 @@ export function initializeApp(): BootstrapResult {
       const recovered = recoverBoyfriendState();
       if (recovered.recovered && recovered.boyfriendState && recovered.swapState) {
         // 恢复持久化数据
-        hydrateStores(recovered.boyfriendState, recovered.swapState, recovered.memory);
+        hydrateStores(recovered.boyfriendState, recovered.swapState, recovered.chatState);
         restored = true;
         message = '欢迎回来！关系状态已恢复。';
       } else {
@@ -89,10 +89,15 @@ export function initializeApp(): BootstrapResult {
       break;
     }
 
-    case 'restored':
-      restored = true;
-      message = '关系状态已从备份中恢复。';
+    case 'restored': {
+      const recovered = recoverBoyfriendState();
+      if (recovered.recovered && recovered.boyfriendState && recovered.swapState) {
+        hydrateStores(recovered.boyfriendState, recovered.swapState, recovered.chatState);
+        restored = true;
+      }
+      message = restored ? '关系状态已从备份中恢复。' : '欢迎来到 BondShift！开始你的关系旅程吧。';
       break;
+    }
   }
 
   // Step 4: 校验
@@ -167,7 +172,7 @@ interface SwapSnapshot {
 export function hydrateStores(
   boyfriendState: BoyfriendSnapshot,
   swapState: SwapSnapshot,
-  memory: UserMemory | null,
+  chatState: PersistedChatState | null,
 ): void {
   // 男友 store
   const bfStore = useBoyfriendStore.getState();
@@ -178,15 +183,22 @@ export function hydrateStores(
     bfStore.interactionHistory,
   );
 
-  // 基于合并后的历史重新计算关系分
-  const recalculatedScores = mergedHistory.length > 0
-    ? calculateRelationshipScores(mergedHistory, swapState.totalSwapCount)
+  const currentId = boyfriendState.currentBoyfriend?.id ?? '';
+  const relationshipHistory = mergedHistory.filter((record) => record.boyfriendId === currentId);
+  const relationshipSwapCount = swapState.swapHistory.filter(
+    (record) => record.fromBoyfriend.id === currentId || record.toBoyfriend.id === currentId,
+  ).length;
+  const currentMemory = chatState?.memoriesByBoyfriend[currentId];
+
+  // 基于当前男友自己的历史重新计算关系分
+  const recalculatedScores = relationshipHistory.length > 0
+    ? calculateRelationshipScores(relationshipHistory, relationshipSwapCount, currentMemory)
     : boyfriendState.relationshipScores;
 
   useBoyfriendStore.setState({
     currentBoyfriend: boyfriendState.currentBoyfriend,
     personality: boyfriendState.personality,
-    relationshipLevel: boyfriendState.relationshipLevel,
+    relationshipLevel: Math.min(10, 1 + Math.floor(relationshipHistory.length / 5)),
     interactionHistory: mergedHistory,
     relationshipScores: recalculatedScores,
   });
@@ -194,12 +206,16 @@ export function hydrateStores(
   // Swap store
   useSwapStore.setState({
     swapHistory: swapState.swapHistory,
+    recentThree: swapState.swapHistory.slice(0, 3),
     totalSwapCount: swapState.totalSwapCount,
   });
 
-  // Chat store (memory)
-  if (memory) {
-    useChatStore.setState({ memory });
+  // Chat store（消息与记忆均按男友ID隔离）
+  if (chatState) {
+    useChatStore.setState({
+      messages: chatState.messages,
+      memoriesByBoyfriend: chatState.memoriesByBoyfriend,
+    });
   }
 }
 
@@ -225,7 +241,10 @@ export function autoSave(): boolean {
       swapHistory: swap.swapHistory,
       totalSwapCount: swap.totalSwapCount,
     },
-    memory: chat.memory,
+    chat: {
+      messages: chat.messages,
+      memoriesByBoyfriend: chat.memoriesByBoyfriend,
+    },
   });
 }
 

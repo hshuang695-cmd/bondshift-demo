@@ -3,19 +3,27 @@ import { motion } from 'framer-motion';
 import { Heart, MessageCircle, Clock, Zap, TrendingUp, Calendar, Sparkles } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import { useReportStore, useBoyfriendStore, useSwapStore, useChatStore } from '../stores';
-import { refreshReport, getStreak, checkIn } from '../core/bondshiftEngine';
+import { refreshReport } from '../core/bondshiftEngine';
+import { dailyCheckIn, getStreakInfo } from '../core/engagementEngine';
 import { deriveRelationshipTrend, getStageConfig } from '../core/relationshipEngine';
+import { EMPTY_USER_MEMORY } from '../stores/chatStore';
 
 const weekDayLabels = ['一', '二', '三', '四', '五', '六', '日'];
 
 export default function ReportPage() {
   const { relationshipScore, interactionStats, weeklyStats } = useReportStore();
   const relationshipLevel = useBoyfriendStore((s) => s.relationshipLevel);
+  const currentBoyfriendId = useBoyfriendStore((s) => s.currentBoyfriend?.id ?? '');
   const totalSwapCount = useSwapStore((s) => s.totalSwapCount);
-  const historyLen = useBoyfriendStore((s) => s.interactionHistory.length);
+  const allInteractionHistory = useBoyfriendStore((s) => s.interactionHistory);
   const relationshipScores = useBoyfriendStore((s) => s.relationshipScores);
-  const interactionHistory = useBoyfriendStore((s) => s.interactionHistory);
-  const memory = useChatStore((s) => s.memory);
+  const memoriesByBoyfriend = useChatStore((s) => s.memoriesByBoyfriend);
+  const interactionHistory = useMemo(
+    () => allInteractionHistory.filter((record) => record.boyfriendId === currentBoyfriendId),
+    [allInteractionHistory, currentBoyfriendId],
+  );
+  const historyLen = interactionHistory.length;
+  const memory = memoriesByBoyfriend[currentBoyfriendId] ?? EMPTY_USER_MEMORY;
 
   // 依赖变化时刷新报告
   useEffect(() => {
@@ -29,8 +37,8 @@ export default function ReportPage() {
   );
 
   // 连续签到信息
-  const streak = useMemo(() => getStreak(), [historyLen]);
-  const checkInResult = useMemo(() => checkIn(), [historyLen]);
+  const streak = useMemo(() => getStreakInfo(interactionHistory), [interactionHistory]);
+  const checkInResult = useMemo(() => dailyCheckIn(interactionHistory), [interactionHistory]);
 
   // 未来预测
   const prediction = useMemo(() => {

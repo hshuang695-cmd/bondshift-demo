@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { SwapRecord, BoyfriendProfile } from '../types';
-import { boyfriends, swapHistory } from '../data';
+import { boyfriends } from '../data';
 
 interface SwapState {
   recommendations: BoyfriendProfile[];
@@ -17,9 +17,9 @@ interface SwapState {
 
 export const useSwapStore = create<SwapState>((set) => ({
   recommendations: boyfriends.filter((b) => b.id !== 'bf_puppy_001'),
-  swapHistory,
-  recentThree: swapHistory.slice(0, 3),
-  totalSwapCount: swapHistory.length,
+  swapHistory: [],
+  recentThree: [],
+  totalSwapCount: 0,
 
   filterType: null,
   setFilterType: (t) => set({ filterType: t }),

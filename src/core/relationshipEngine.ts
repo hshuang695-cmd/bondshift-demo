@@ -114,8 +114,9 @@ export function calculateRelationshipScores(
 
     switch (record.type) {
       case 'chat': {
-        intimacy += 2 + Math.random() * 1.5;
-        trust += 0.8 + Math.random() * 0.8;
+        // 固定增量保证同一份历史在刷新、恢复和换乘后得到相同分数
+        intimacy += 2.75;
+        trust += 1.2;
 
         const detail = record.detail ?? '';
         if (/正面|积极|开心/.test(detail)) {

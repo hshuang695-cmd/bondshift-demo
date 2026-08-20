@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send } from 'lucide-react';
@@ -6,14 +6,16 @@ import { useBoyfriendStore } from '../stores';
 import { useChatStore } from '../stores/chatStore';
 import { recordInteraction } from '../core/bondshiftEngine';
 import { getAvatarByArchetype, getTypeEmoji } from '../core/avatarEngine';
+import type { BoyfriendTypeId } from '../types';
 
-function AvatarImg({ typeId, className }: { typeId: string; className?: string }) {
-  const avatar = getAvatarByArchetype(typeId as any);
+function AvatarImg({ typeId, className }: { typeId: BoyfriendTypeId; className?: string }) {
+  const avatar = getAvatarByArchetype(typeId);
   return (
     <img
       src={avatar.primary}
       alt={typeId}
       className={className}
+      decoding="async"
       onError={(e) => {
         const el = e.currentTarget;
         if (el.src === avatar.primary) {
@@ -36,7 +38,15 @@ export default function ChatPage() {
     s.availableBoyfriends.find((b) => b.id === boyfriendId),
   );
 
-  const { messages, typingStatus, addUserMessage } = useChatStore();
+  const allMessages = useChatStore((state) => state.messages);
+  const typingStatus = useChatStore(
+    (state) => state.typingByBoyfriend[boyfriendId ?? ''] ?? 'idle',
+  );
+  const addUserMessage = useChatStore((state) => state.addUserMessage);
+  const messages = useMemo(
+    () => allMessages.filter((message) => message.sessionId === boyfriendId),
+    [allMessages, boyfriendId],
+  );
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,10 +64,10 @@ export default function ChatPage() {
   const handleSend = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed || typingStatus === 'typing') return;
-    addUserMessage(trimmed);
+    addUserMessage(trimmed, boyfriendId);
     setInput('');
     inputRef.current?.focus();
-  }, [input, typingStatus, addUserMessage]);
+  }, [input, typingStatus, addUserMessage, boyfriendId]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

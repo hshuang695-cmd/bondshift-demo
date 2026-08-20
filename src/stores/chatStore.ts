@@ -13,6 +13,7 @@ import {
   isFollowUpPrompt,
 } from '../core/contextEngine';
 import { useBoyfriendStore } from './boyfriendStore';
+import { calculateRelationshipScores } from '../core/relationshipEngine';
 
 // 默认人格回退（personality 为 null 时使用）
 const FALLBACK_PERSONALITY: BoyfriendPersonality = {
@@ -31,6 +32,16 @@ function log(msg: string, data?: unknown) {
 function logError(msg: string, err: unknown) {
   if (!DEBUG) return;
   console.error(`[Chat Error] ${msg}`, err);
+}
+
+let chatSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleChatSave() {
+  if (chatSaveTimer) clearTimeout(chatSaveTimer);
+  chatSaveTimer = setTimeout(() => {
+    window.dispatchEvent(new Event('bondshift:chat-changed'));
+    chatSaveTimer = null;
+  }, 300);
 }
 
 /** 判断 bot 回复是否真正履行了动作（而非仅承诺/确认） */
@@ -64,39 +75,46 @@ function isReplyFulfillment(replyContent: string, actionType: PendingActionType)
   return text.length > 20;
 }
 
-interface ChatState {
-  messages: ChatMessage[];
-  typingStatus: TypingStatus;
-  memory: UserMemory;
-  lastContext: string;
-  pendingAction: PendingAction | null;
+export const EMPTY_USER_MEMORY = createMemory();
 
-  addUserMessage: (content: string) => void;
-  generateAndAddReply: () => void;
-  clearChat: () => void;
-  setTypingStatus: (status: TypingStatus) => void;
+interface ChatState {
+  /** 所有消息统一保存，通过 sessionId 按男友隔离 */
+  messages: ChatMessage[];
+  memoriesByBoyfriend: Record<string, UserMemory>;
+  typingByBoyfriend: Record<string, TypingStatus>;
+  lastContextByBoyfriend: Record<string, string>;
+  pendingActionsByBoyfriend: Record<string, PendingAction | null>;
+
+  addUserMessage: (content: string, boyfriendId?: string) => void;
+  generateAndAddReply: (boyfriendId: string) => void;
+  clearChat: (boyfriendId?: string) => void;
+  setTypingStatus: (status: TypingStatus, boyfriendId?: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
-  typingStatus: 'idle',
-  memory: createMemory(),
-  lastContext: '',
-  pendingAction: null,
+  memoriesByBoyfriend: {},
+  typingByBoyfriend: {},
+  lastContextByBoyfriend: {},
+  pendingActionsByBoyfriend: {},
 
-  addUserMessage: (content) => {
+  addUserMessage: (content, boyfriendId) => {
     log('user message added', content.slice(0, 30));
 
     const bf = useBoyfriendStore.getState().currentBoyfriend;
-    const bfId = bf?.id ?? '';
-    const currentPending = get().pendingAction;
+    const bfId = boyfriendId ?? bf?.id ?? '';
+    if (!bfId) return;
+
+    const state = get();
+    const currentPending = state.pendingActionsByBoyfriend[bfId] ?? null;
+    let nextPending = currentPending;
 
     // Phase 13: 检测用户是否在发起新请求 → 创建/更新 pendingAction
     const userRequest = detectUserActionRequest(content);
     if (userRequest) {
       const newAction = createPendingAction(userRequest, 'user_request', content.slice(0, 20));
       log('pending action created from user request', { type: newAction.type });
-      set({ pendingAction: newAction });
+      nextPending = newAction;
     }
     // 如果是跟进提示且有未完成的 pendingAction → 标记以便强制履行
     else if (currentPending && !currentPending.fulfilled && isFollowUpPrompt(content)) {
@@ -109,7 +127,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 其他情况：如果有过期或已履行的 pendingAction → 清除
     else if (currentPending && (currentPending.fulfilled || isPendingActionExpired(currentPending))) {
       log('pending action cleared', { type: currentPending.type, fulfilled: currentPending.fulfilled });
-      set({ pendingAction: null });
+      nextPending = null;
     }
 
     const userMsg: ChatMessage = {
@@ -122,55 +140,70 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isRead: true,
     };
 
-    const currentMemory = get().memory;
+    const currentMemory = state.memoriesByBoyfriend[bfId] ?? createMemory();
     const newMemory = updateMemory(currentMemory, content);
 
     set((state) => ({
       messages: [...state.messages, userMsg],
-      memory: newMemory,
-      typingStatus: 'typing',
+      memoriesByBoyfriend: { ...state.memoriesByBoyfriend, [bfId]: newMemory },
+      typingByBoyfriend: { ...state.typingByBoyfriend, [bfId]: 'typing' },
+      pendingActionsByBoyfriend: { ...state.pendingActionsByBoyfriend, [bfId]: nextPending },
     }));
+    scheduleChatSave();
 
     log('typing started');
 
     const delay = 100 + Math.random() * 250;
 
     setTimeout(() => {
-      get().generateAndAddReply();
+      get().generateAndAddReply(bfId);
     }, delay);
   },
 
-  generateAndAddReply: () => {
+  generateAndAddReply: (boyfriendId) => {
     log('reply generation started');
 
     const state = get();
-    const bf = useBoyfriendStore.getState();
+    const boyfriendState = useBoyfriendStore.getState();
+    const boyfriend = boyfriendState.availableBoyfriends.find((item) => item.id === boyfriendId);
 
-    if (!bf.currentBoyfriend) {
-      logError('no current boyfriend', null);
-      set({ typingStatus: 'idle' });
+    if (!boyfriend) {
+      logError('boyfriend not found', null);
+      set((current) => ({
+        typingByBoyfriend: { ...current.typingByBoyfriend, [boyfriendId]: 'idle' },
+      }));
       return;
     }
 
-    const personality: BoyfriendPersonality = bf.personality ?? FALLBACK_PERSONALITY;
-    if (!bf.personality) {
+    const personality: BoyfriendPersonality = boyfriendState.personality ?? FALLBACK_PERSONALITY;
+    if (!boyfriendState.personality) {
       log('personality is null, using fallback');
     }
 
-    const lastUserMsg = [...state.messages].reverse().find((m) => m.sender === 'user');
+    const conversationMessages = state.messages.filter((message) => message.sessionId === boyfriendId);
+    const memory = state.memoriesByBoyfriend[boyfriendId] ?? createMemory();
+    const relationshipHistory = boyfriendState.interactionHistory.filter(
+      (record) => record.boyfriendId === boyfriendId,
+    );
+    const relationshipLevel = Math.min(10, 1 + Math.floor(relationshipHistory.length / 5));
+    const relationshipScores = calculateRelationshipScores(relationshipHistory, 0, memory);
+
+    const lastUserMsg = [...conversationMessages].reverse().find((m) => m.sender === 'user');
     if (!lastUserMsg) {
       logError('no user message found', null);
-      set({ typingStatus: 'idle' });
+      set((current) => ({
+        typingByBoyfriend: { ...current.typingByBoyfriend, [boyfriendId]: 'idle' },
+      }));
       return;
     }
 
-    const lastBotMsg = [...state.messages].reverse().find((m) => m.sender === 'boyfriend');
+    const lastBotMsg = [...conversationMessages].reverse().find((m) => m.sender === 'boyfriend');
     if (lastBotMsg) {
       log('last bot message', lastBotMsg.content.slice(0, 40));
     }
 
     // Phase 13: 更新 pendingAction 的 turnCount
-    let currentPending = state.pendingAction;
+    let currentPending = state.pendingActionsByBoyfriend[boyfriendId] ?? null;
     if (currentPending && !currentPending.fulfilled) {
       currentPending = { ...currentPending, turnCount: currentPending.turnCount + 1 };
       log('pending action incremented', { type: currentPending.type, turn: currentPending.turnCount });
@@ -185,13 +218,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const reply = generateReply({
         userMessage: lastUserMsg.content,
-        typeId: bf.currentBoyfriend.typeId,
+        typeId: boyfriend.typeId,
         personality,
-        relationshipLevel: bf.relationshipLevel,
-        relationshipStage: bf.relationshipScores.stage,
-        memory: state.memory,
-        boyfriendId: bf.currentBoyfriend.id,
-        recentMessages: state.messages.slice(-6),
+        relationshipLevel,
+        relationshipStage: relationshipScores.stage,
+        memory,
+        boyfriendId,
+        recentMessages: conversationMessages.slice(-6),
         lastBotMessage: lastBotMsg,
         pendingAction: currentPending,
       });
@@ -213,10 +246,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       set((s) => ({
         messages: [...s.messages, reply],
-        typingStatus: 'idle',
-        lastContext: reply.content.slice(0, 50),
-        pendingAction: updatedPending,
+        typingByBoyfriend: { ...s.typingByBoyfriend, [boyfriendId]: 'idle' },
+        lastContextByBoyfriend: {
+          ...s.lastContextByBoyfriend,
+          [boyfriendId]: reply.content.slice(0, 50),
+        },
+        pendingActionsByBoyfriend: {
+          ...s.pendingActionsByBoyfriend,
+          [boyfriendId]: updatedPending,
+        },
       }));
+      scheduleChatSave();
 
       log('reply added to messages');
       log('typing ended');
@@ -225,7 +265,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const fallbackReply: ChatMessage = {
         id: `msg_${Date.now()}_fallback`,
-        sessionId: bf.currentBoyfriend.id,
+        sessionId: boyfriendId,
         sender: 'boyfriend',
         type: 'text',
         content: '嗯…我在听。',
@@ -235,23 +275,34 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       set((s) => ({
         messages: [...s.messages, fallbackReply],
-        typingStatus: 'idle',
-        pendingAction: null,
+        typingByBoyfriend: { ...s.typingByBoyfriend, [boyfriendId]: 'idle' },
+        pendingActionsByBoyfriend: { ...s.pendingActionsByBoyfriend, [boyfriendId]: null },
       }));
+      scheduleChatSave();
 
       log('fallback reply added');
     }
   },
 
-  clearChat: () => {
-    set({
-      messages: [],
-      memory: createMemory(),
-      typingStatus: 'idle',
-      lastContext: '',
-      pendingAction: null,
-    });
+  clearChat: (boyfriendId) => {
+    const activeId = boyfriendId ?? useBoyfriendStore.getState().currentBoyfriend?.id;
+    if (!activeId) return;
+
+    set((state) => ({
+      messages: state.messages.filter((message) => message.sessionId !== activeId),
+      memoriesByBoyfriend: { ...state.memoriesByBoyfriend, [activeId]: createMemory() },
+      typingByBoyfriend: { ...state.typingByBoyfriend, [activeId]: 'idle' },
+      lastContextByBoyfriend: { ...state.lastContextByBoyfriend, [activeId]: '' },
+      pendingActionsByBoyfriend: { ...state.pendingActionsByBoyfriend, [activeId]: null },
+    }));
+    scheduleChatSave();
   },
 
-  setTypingStatus: (status) => set({ typingStatus: status }),
+  setTypingStatus: (status, boyfriendId) => {
+    const activeId = boyfriendId ?? useBoyfriendStore.getState().currentBoyfriend?.id;
+    if (!activeId) return;
+    set((state) => ({
+      typingByBoyfriend: { ...state.typingByBoyfriend, [activeId]: status },
+    }));
+  },
 }));

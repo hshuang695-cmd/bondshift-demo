@@ -39,6 +39,7 @@ import { usePreferenceStore } from '../stores/preferenceStore';
 import { useBoyfriendStore } from '../stores/boyfriendStore';
 import { useSwapStore } from '../stores/swapStore';
 import { useReportStore } from '../stores/reportStore';
+import { useChatStore } from '../stores/chatStore';
 import { boyfriends } from '../data';
 
 // ─── 持久化 (自动保存) ───
@@ -122,10 +123,15 @@ export function swapBoyfriend(fromId: string, toId: string, reason: string): voi
     recommendations: swapState.recommendations.filter((b) => b.id !== toId),
   });
 
-  // 更新 boyfriendStore → 换人 + 重置关系分
+  // 更新 boyfriendStore → 换人 + 恢复目标男友自己的关系状态
+  const boyfriendState = useBoyfriendStore.getState();
+  const targetHistory = boyfriendState.interactionHistory.filter((record) => record.boyfriendId === toId);
+  const targetMemory = useChatStore.getState().memoriesByBoyfriend[toId];
+  const targetSwapCount = _getRelationshipSwapCount(toId);
   useBoyfriendStore.setState({
     currentBoyfriend: toBf,
-    relationshipScores: createRelationshipScores(),
+    relationshipLevel: Math.min(10, 1 + Math.floor(targetHistory.length / 5)),
+    relationshipScores: calculateRelationshipScores(targetHistory, targetSwapCount, targetMemory),
   });
 
   // 记录交互 (新男友的swap_in)
@@ -150,6 +156,8 @@ export function recordInteraction(
 ): void {
   const bfStore = useBoyfriendStore.getState();
   const bfId = boyfriendId ?? bfStore.currentBoyfriend?.id ?? '';
+  if (!bfId) return;
+  const relationshipHistory = bfStore.interactionHistory.filter((item) => item.boyfriendId === bfId);
 
   const record: InteractionRecord = {
     id: `int_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -160,22 +168,27 @@ export function recordInteraction(
   };
 
   // 去重检查
-  if (isDuplicate(record, bfStore.interactionHistory)) return;
+  if (isDuplicate(record, relationshipHistory)) return;
 
+  const newRelationshipHistory = [record, ...relationshipHistory];
   const newHistory = [record, ...bfStore.interactionHistory];
-  const newLevel = Math.min(10, 1 + Math.floor(newHistory.length / 5));
+  const newLevel = Math.min(10, 1 + Math.floor(newRelationshipHistory.length / 5));
 
   // 重新计算关系分
-  const swapCount = useSwapStore.getState().totalSwapCount;
-  const newScores = calculateRelationshipScores(newHistory, swapCount);
+  const swapCount = _getRelationshipSwapCount(bfId);
+  const memory = useChatStore.getState().memoriesByBoyfriend[bfId];
+  const previousScores = calculateRelationshipScores(relationshipHistory, swapCount, memory);
+  const newScores = calculateRelationshipScores(newRelationshipHistory, swapCount, memory);
 
   // 检测关系阶段变化
-  const prevStage = bfStore.relationshipScores.stage;
+  const prevStage = previousScores.stage;
 
+  const isActiveRelationship = bfStore.currentBoyfriend?.id === bfId;
   useBoyfriendStore.setState({
     interactionHistory: newHistory,
-    relationshipLevel: newLevel,
-    relationshipScores: newScores,
+    ...(isActiveRelationship
+      ? { relationshipLevel: newLevel, relationshipScores: newScores }
+      : {}),
   });
 
   // 分析埋点: 关系阶段变化
@@ -201,11 +214,15 @@ function _scheduleAutoSave(): void {
 export function getReportData(): DerivedReport {
   const bf = useBoyfriendStore.getState();
   const swap = useSwapStore.getState();
+  const currentId = bf.currentBoyfriend?.id ?? '';
+  const relationshipHistory = bf.interactionHistory.filter((record) => record.boyfriendId === currentId);
 
   return deriveFullReport({
     personality: bf.personality,
-    interactionHistory: bf.interactionHistory,
-    swapCount: swap.totalSwapCount,
+    interactionHistory: relationshipHistory,
+    swapCount: swap.swapHistory.filter(
+      (record) => record.fromBoyfriend.id === currentId || record.toBoyfriend.id === currentId,
+    ).length,
   });
 }
 
@@ -283,7 +300,9 @@ export function checkIsNewUser(): boolean {
 
 /** 检测是否为回访用户 */
 export function checkIsReturnVisit(): boolean {
-  const history = useBoyfriendStore.getState().interactionHistory;
+  const bf = useBoyfriendStore.getState();
+  const currentId = bf.currentBoyfriend?.id ?? '';
+  const history = bf.interactionHistory.filter((record) => record.boyfriendId === currentId);
   if (history.length === 0) return false;
   const lastTime = history[0].timestamp;
   return detectReturnVisit(lastTime);
@@ -322,7 +341,9 @@ export function getSimulatedMessages() {
 
 /** 执行每日签到 */
 export function checkIn(): DailyCheckIn {
-  const history = useBoyfriendStore.getState().interactionHistory;
+  const bf = useBoyfriendStore.getState();
+  const currentId = bf.currentBoyfriend?.id ?? '';
+  const history = bf.interactionHistory.filter((record) => record.boyfriendId === currentId);
   const result = dailyCheckIn(history);
 
   // 应用签到加成
@@ -337,7 +358,9 @@ export function checkIn(): DailyCheckIn {
 
 /** 获取连续互动信息 */
 export function getStreak(): StreakInfo {
-  const history = useBoyfriendStore.getState().interactionHistory;
+  const bf = useBoyfriendStore.getState();
+  const currentId = bf.currentBoyfriend?.id ?? '';
+  const history = bf.interactionHistory.filter((record) => record.boyfriendId === currentId);
   return getStreakInfo(history);
 }
 
@@ -355,7 +378,7 @@ export function getNudge(): EmotionalNudge {
   }
 
   return generateEmotionalNudge({
-    history: bf.interactionHistory,
+    history: bf.interactionHistory.filter((record) => record.boyfriendId === bf.currentBoyfriend?.id),
     typeId: bf.currentBoyfriend.typeId,
     relationshipStage: bf.relationshipScores.stage,
   });
@@ -364,7 +387,9 @@ export function getNudge(): EmotionalNudge {
 /** 检查并应用关系衰减 */
 export function checkDecay(): void {
   const bf = useBoyfriendStore.getState();
-  const result = applyRelationshipDecay(bf.relationshipScores, bf.interactionHistory);
+  const currentId = bf.currentBoyfriend?.id ?? '';
+  const relationshipHistory = bf.interactionHistory.filter((record) => record.boyfriendId === currentId);
+  const result = applyRelationshipDecay(bf.relationshipScores, relationshipHistory);
 
   if (result.decayMessage) {
     useBoyfriendStore.setState({ relationshipScores: result.scores });
@@ -379,6 +404,7 @@ function _addInteraction(
   detail?: string,
 ): void {
   const bfStore = useBoyfriendStore.getState();
+  const relationshipHistory = bfStore.interactionHistory.filter((record) => record.boyfriendId === boyfriendId);
   const record: InteractionRecord = {
     id: `int_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     type,
@@ -386,18 +412,28 @@ function _addInteraction(
     timestamp: Date.now(),
     detail,
   };
-  if (isDuplicate(record, bfStore.interactionHistory)) return;
+  if (isDuplicate(record, relationshipHistory)) return;
   const newHistory = [record, ...bfStore.interactionHistory];
-  const newLevel = Math.min(10, 1 + Math.floor(newHistory.length / 5));
+  const newRelationshipHistory = [record, ...relationshipHistory];
+  const newLevel = Math.min(10, 1 + Math.floor(newRelationshipHistory.length / 5));
   useBoyfriendStore.setState({
     interactionHistory: newHistory,
-    relationshipLevel: newLevel,
+    ...(bfStore.currentBoyfriend?.id === boyfriendId ? { relationshipLevel: newLevel } : {}),
   });
 }
 
 function _recalcScores(): void {
   const bfStore = useBoyfriendStore.getState();
-  const swapCount = useSwapStore.getState().totalSwapCount;
-  const newScores = calculateRelationshipScores(bfStore.interactionHistory, swapCount);
+  const currentId = bfStore.currentBoyfriend?.id ?? '';
+  const relationshipHistory = bfStore.interactionHistory.filter((record) => record.boyfriendId === currentId);
+  const swapCount = _getRelationshipSwapCount(currentId);
+  const memory = useChatStore.getState().memoriesByBoyfriend[currentId];
+  const newScores = calculateRelationshipScores(relationshipHistory, swapCount, memory);
   useBoyfriendStore.setState({ relationshipScores: newScores });
+}
+
+function _getRelationshipSwapCount(boyfriendId: string): number {
+  return useSwapStore.getState().swapHistory.filter(
+    (record) => record.fromBoyfriend.id === boyfriendId || record.toBoyfriend.id === boyfriendId,
+  ).length;
 }

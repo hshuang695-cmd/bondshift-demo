@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import { useSettingsStore, useBoyfriendStore, useSwapStore, useChatStore } from '../stores';
+import { EMPTY_USER_MEMORY } from '../stores/chatStore';
 
 interface SettingRowProps {
   icon: LucideIcon;
@@ -67,10 +68,15 @@ export default function SettingsPage() {
   } = useSettingsStore();
 
   const relationshipLevel = useBoyfriendStore((s) => s.relationshipLevel);
-  const interactionCount = useBoyfriendStore((s) => s.interactionHistory.length);
+  const currentBoyfriendId = useBoyfriendStore((s) => s.currentBoyfriend?.id ?? '');
+  const interactionCount = useBoyfriendStore(
+    (s) => s.interactionHistory.filter((record) => record.boyfriendId === currentBoyfriendId).length,
+  );
   const totalSwapCount = useSwapStore((s) => s.totalSwapCount);
   const relationshipScores = useBoyfriendStore((s) => s.relationshipScores);
-  const memory = useChatStore((s) => s.memory);
+  const memory = useChatStore(
+    (s) => s.memoriesByBoyfriend[currentBoyfriendId] ?? EMPTY_USER_MEMORY,
+  );
 
   const stageEmoji =
     relationshipScores.stage === 'deep_bond' ? '💝' :

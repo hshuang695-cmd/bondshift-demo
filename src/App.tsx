@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes';
-import { initializeApp } from './core/productBootstrap';
+import { autoSave, initializeApp } from './core/productBootstrap';
 import { trackAppLaunch, trackBootstrap } from './core/analyticsEngine';
 import { isFeatureEnabled } from './core/releaseEngine';
 import { DEBUG_FLAGS } from './config/env';
@@ -36,6 +36,12 @@ export default function App() {
         console.log('[BondShift] 产品指标收集已启用');
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const saveChatState = () => autoSave();
+    window.addEventListener('bondshift:chat-changed', saveChatState);
+    return () => window.removeEventListener('bondshift:chat-changed', saveChatState);
   }, []);
 
   return (
