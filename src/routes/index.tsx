@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
 
 const SetupPage = lazy(() => import('../pages/SetupPage'));
+const LandingPage = lazy(() => import('../pages/LandingPage'));
 const HomePage = lazy(() => import('../pages/HomePage'));
 const SwapPage = lazy(() => import('../pages/SwapPage'));
 const ReportPage = lazy(() => import('../pages/ReportPage'));
@@ -21,13 +22,14 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/" element={<AppShell />}>
-          <Route index element={<Navigate to="/home" replace />} />
-          <Route path="setup" element={<SetupPage />} />
-          <Route path="home" element={<HomePage />} />
-          <Route path="swap" element={<SwapPage />} />
-          <Route path="report" element={<ReportPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+        <Route path="/" element={<LandingPage />} />
+
+        <Route element={<AppShell />}>
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/swap" element={<SwapPage />} />
+          <Route path="/report" element={<ReportPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* 全屏子页面 (无底部导航) */}
@@ -37,7 +39,7 @@ export default function AppRoutes() {
         <Route path="/vr/*" element={<Navigate to="/home" replace />} />
         <Route path="/voice/*" element={<Navigate to="/home" replace />} />
         <Route path="/compare" element={<Navigate to="/home" replace />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

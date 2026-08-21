@@ -15,6 +15,8 @@ import { DEBUG_FLAGS, APP_MODE } from '../config/env';
 export type AnalyticsEvent =
   | 'app_launch'
   | 'app_bootstrap'
+  | 'landing_view'
+  | 'experience_start'
   | 'user_onboarding_start'
   | 'user_onboarding_complete'
   | 'boyfriend_created'
@@ -108,6 +110,8 @@ function track(event: AnalyticsEvent, metadata: Record<string, unknown> = {}): v
 const EVENT_EMOJI: Partial<Record<AnalyticsEvent, string>> = {
   app_launch: '🚀',
   app_bootstrap: '⚡',
+  landing_view: '🚪',
+  experience_start: '▶️',
   user_onboarding_start: '👋',
   user_onboarding_complete: '✅',
   boyfriend_created: '💝',
@@ -140,6 +144,14 @@ export function trackAppLaunch(userState: string, readyScore: number): void {
 /** 启动引导完成 */
 export function trackBootstrap(result: { userState: string; restored: boolean; readyScore: number }): void {
   track('app_bootstrap', result);
+}
+
+/** 落地页漏斗 */
+export function trackLandingView(source: string, deviceType: 'mobile' | 'desktop'): void {
+  track('landing_view', { source, deviceType });
+}
+export function trackExperienceStart(source: string): void {
+  track('experience_start', { source });
 }
 
 /** Onboarding 流程 */
