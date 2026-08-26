@@ -14,6 +14,7 @@ import {
 } from '../core/contextEngine';
 import { useBoyfriendStore } from './boyfriendStore';
 import { calculateRelationshipScores } from '../core/relationshipEngine';
+import { requestDeepSeekReply } from '../services/chatApi';
 
 // 默认人格回退（personality 为 null 时使用）
 const FALLBACK_PERSONALITY: BoyfriendPersonality = {
@@ -84,11 +85,15 @@ interface ChatState {
   typingByBoyfriend: Record<string, TypingStatus>;
   lastContextByBoyfriend: Record<string, string>;
   pendingActionsByBoyfriend: Record<string, PendingAction | null>;
+  quickRepliesByBoyfriend: Record<string, string[]>;
+  errorByBoyfriend: Record<string, string | null>;
 
   addUserMessage: (content: string, boyfriendId?: string) => void;
   generateAndAddReply: (boyfriendId: string) => void;
   clearChat: (boyfriendId?: string) => void;
   setTypingStatus: (status: TypingStatus, boyfriendId?: string) => void;
+  seedFirstMeeting: (boyfriendId: string, content: string, quickReplies: string[]) => void;
+  retryLastReply: (boyfriendId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -97,6 +102,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
   typingByBoyfriend: {},
   lastContextByBoyfriend: {},
   pendingActionsByBoyfriend: {},
+  quickRepliesByBoyfriend: {},
+  errorByBoyfriend: {},
+
+  seedFirstMeeting: (boyfriendId, content, quickReplies) => {
+    const state = get();
+    const hasConversation = state.messages.some((message) => message.sessionId === boyfriendId);
+    if (hasConversation) {
+      set((current) => ({
+        quickRepliesByBoyfriend: { ...current.quickRepliesByBoyfriend, [boyfriendId]: quickReplies },
+      }));
+      return;
+    }
+
+    const firstMessage: ChatMessage = {
+      id: `msg_${Date.now()}_first_meeting`,
+      sessionId: boyfriendId,
+      sender: 'boyfriend',
+      type: 'text',
+      content,
+      timestamp: Date.now(),
+      isRead: false,
+      source: 'seed',
+    };
+    set((current) => ({
+      messages: [...current.messages, firstMessage],
+      quickRepliesByBoyfriend: { ...current.quickRepliesByBoyfriend, [boyfriendId]: quickReplies },
+    }));
+    scheduleChatSave();
+  },
 
   addUserMessage: (content, boyfriendId) => {
     log('user message added', content.slice(0, 30));
@@ -148,6 +182,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       memoriesByBoyfriend: { ...state.memoriesByBoyfriend, [bfId]: newMemory },
       typingByBoyfriend: { ...state.typingByBoyfriend, [bfId]: 'typing' },
       pendingActionsByBoyfriend: { ...state.pendingActionsByBoyfriend, [bfId]: nextPending },
+      errorByBoyfriend: { ...state.errorByBoyfriend, [bfId]: null },
     }));
     scheduleChatSave();
 
@@ -160,7 +195,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }, delay);
   },
 
-  generateAndAddReply: (boyfriendId) => {
+  generateAndAddReply: async (boyfriendId) => {
     log('reply generation started');
 
     const state = get();
@@ -216,18 +251,44 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     try {
-      const reply = generateReply({
-        userMessage: lastUserMsg.content,
-        typeId: boyfriend.typeId,
-        personality,
-        relationshipLevel,
-        relationshipStage: relationshipScores.stage,
-        memory,
-        boyfriendId,
-        recentMessages: conversationMessages.slice(-6),
-        lastBotMessage: lastBotMsg,
-        pendingAction: currentPending,
-      });
+      let reply: ChatMessage;
+      let serviceError: string | null = null;
+      try {
+        const content = await requestDeepSeekReply({
+          boyfriendId,
+          typeId: boyfriend.typeId,
+          messages: conversationMessages,
+        });
+        reply = {
+          id: `msg_${Date.now()}_deepseek`,
+          sessionId: boyfriendId,
+          sender: 'boyfriend',
+          type: 'text',
+          content,
+          timestamp: Date.now(),
+          isRead: false,
+          source: 'deepseek',
+        };
+      } catch (error) {
+        serviceError = error instanceof Error && error.name !== 'AbortError'
+          ? error.message
+          : 'AI 回复超时，请稍后重试';
+        reply = {
+          ...generateReply({
+            userMessage: lastUserMsg.content,
+            typeId: boyfriend.typeId,
+            personality,
+            relationshipLevel,
+            relationshipStage: relationshipScores.stage,
+            memory,
+            boyfriendId,
+            recentMessages: conversationMessages.slice(-6),
+            lastBotMessage: lastBotMsg,
+            pendingAction: currentPending,
+          }),
+          source: 'fallback',
+        };
+      }
 
       log('reply generated', reply.content.slice(0, 40));
 
@@ -255,6 +316,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...s.pendingActionsByBoyfriend,
           [boyfriendId]: updatedPending,
         },
+        errorByBoyfriend: { ...s.errorByBoyfriend, [boyfriendId]: serviceError },
       }));
       scheduleChatSave();
 
@@ -271,17 +333,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content: '嗯…我在听。',
         timestamp: Date.now(),
         isRead: false,
+        source: 'fallback',
       };
 
       set((s) => ({
         messages: [...s.messages, fallbackReply],
         typingByBoyfriend: { ...s.typingByBoyfriend, [boyfriendId]: 'idle' },
         pendingActionsByBoyfriend: { ...s.pendingActionsByBoyfriend, [boyfriendId]: null },
+        errorByBoyfriend: { ...s.errorByBoyfriend, [boyfriendId]: '回复生成失败，请重试' },
       }));
       scheduleChatSave();
 
       log('fallback reply added');
     }
+  },
+
+  retryLastReply: (boyfriendId) => {
+    const conversation = get().messages.filter((message) => message.sessionId === boyfriendId);
+    const lastUser = [...conversation].reverse().find((message) => message.sender === 'user');
+    if (!lastUser || get().typingByBoyfriend[boyfriendId] === 'typing') return;
+
+    set((state) => ({
+      messages: state.messages.filter((message) => !(
+        message.sessionId === boyfriendId
+        && message.source === 'fallback'
+        && message.timestamp > lastUser.timestamp
+      )),
+      typingByBoyfriend: { ...state.typingByBoyfriend, [boyfriendId]: 'typing' },
+      errorByBoyfriend: { ...state.errorByBoyfriend, [boyfriendId]: null },
+    }));
+    void get().generateAndAddReply(boyfriendId);
   },
 
   clearChat: (boyfriendId) => {
@@ -294,6 +375,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       typingByBoyfriend: { ...state.typingByBoyfriend, [activeId]: 'idle' },
       lastContextByBoyfriend: { ...state.lastContextByBoyfriend, [activeId]: '' },
       pendingActionsByBoyfriend: { ...state.pendingActionsByBoyfriend, [activeId]: null },
+      quickRepliesByBoyfriend: { ...state.quickRepliesByBoyfriend, [activeId]: [] },
+      errorByBoyfriend: { ...state.errorByBoyfriend, [activeId]: null },
     }));
     scheduleChatSave();
   },

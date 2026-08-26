@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import StatusBar from './StatusBar';
 import BottomNav from './BottomNav';
 
-const FULL_SCREEN_ROUTES = ['/chat', '/vr', '/voice', '/compare'];
+const FULL_SCREEN_ROUTES = ['/setup', '/match', '/chat', '/vr', '/voice', '/compare'];
 
 const pageVariants = {
   initial: { opacity: 0, y: 12, scale: 0.995 },

@@ -1,73 +1,38 @@
-# React + TypeScript + Vite
+# BONDSHIFT
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+BONDSHIFT 是一款面向长期 AI 陪伴用户的关系换乘体验。新用户通过三道情绪支持情景题了解自己的陪伴偏好，获得稳定匹配，并在首次相遇后进入真实 AI 对话。
 
-Currently, two official plugins are available:
+## 本地运行
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+只检查前端和安全降级时，Vite 即可运行。需要连同 Netlify Function 测试 DeepSeek 时，请安装 Netlify CLI 后使用 `netlify dev`。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## DeepSeek 服务端配置
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+在 Netlify 项目设置的环境变量中配置：
+
+- `DEEPSEEK_API_KEY`：必填，只能存在于服务端，不使用 `VITE_` 前缀。
+- `DEEPSEEK_MODEL`：可选，默认 `deepseek-chat`。
+- `DEEPSEEK_API_URL`：可选，默认 DeepSeek Chat Completions 地址。
+
+本地变量格式见 `.env.example`。不要提交真实密钥。
+
+## 工程检查
+
+```bash
+npm run lint
+npm run build
 ```
+
+核心首次体验的浏览器验收脚本是 `tests/e2e-onboarding.mjs`。它覆盖三道情景题、返回修改、确定性匹配、首次相遇、快捷回复以及 AI 未连接时的降级与重试入口。
+
+## 数据与隐私
+
+- 匿名 ID 只保存在当前浏览器，不包含姓名、手机号或邮箱。
+- 对话和记忆按男友 ID 隔离并保存在浏览器本地。
+- 每次请求只向服务端发送当前男友最近 10 条对话。
+- DeepSeek 不可用时保留用户消息，并使用本地人格回复降级。

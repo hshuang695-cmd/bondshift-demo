@@ -10,6 +10,7 @@ const SwapPage = lazy(() => import('../pages/SwapPage'));
 const ReportPage = lazy(() => import('../pages/ReportPage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const ChatPage = lazy(() => import('../pages/ChatPage'));
+const MatchPage = lazy(() => import('../pages/MatchPage'));
 
 function RouteFallback() {
   return (
@@ -28,6 +29,7 @@ export default function AppRoutes() {
         <Route element={<ProductRuntime />}>
           <Route element={<AppShell />}>
             <Route path="/setup" element={<SetupPage />} />
+            <Route path="/match" element={<MatchPage />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/swap" element={<SwapPage />} />
             <Route path="/report" element={<ReportPage />} />

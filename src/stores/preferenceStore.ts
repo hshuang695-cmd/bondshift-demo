@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { MbtiType, TraitKey, ChatStyle } from '../types';
+import type { ScenarioAnswers } from '../core/scenarioMatchEngine';
 
 interface PreferenceState {
   step: 1 | 2 | 3;
@@ -28,6 +29,9 @@ interface PreferenceState {
 
   chatStyle: ChatStyle;
   setChatStyle: (s: ChatStyle) => void;
+
+  scenarioAnswers: ScenarioAnswers;
+  setScenarioAnswer: (questionId: string, answerId: string) => void;
 
   resetAll: () => void;
 }
@@ -71,6 +75,12 @@ export const usePreferenceStore = create<PreferenceState>((set) => ({
   chatStyle: 'sweet',
   setChatStyle: (s) => set({ chatStyle: s }),
 
+  scenarioAnswers: {},
+  setScenarioAnswer: (questionId, answerId) =>
+    set((state) => ({
+      scenarioAnswers: { ...state.scenarioAnswers, [questionId]: answerId },
+    })),
+
   resetAll: () =>
     set({
       step: 1,
@@ -82,5 +92,6 @@ export const usePreferenceStore = create<PreferenceState>((set) => ({
       preferredHeight: 'average',
       preferredBuild: 'average',
       chatStyle: 'sweet',
+      scenarioAnswers: {},
     }),
 }));

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, RefreshCw, Send } from 'lucide-react';
 import { useBoyfriendStore } from '../stores';
 import { useChatStore } from '../stores/chatStore';
 import { recordInteraction } from '../core/bondshiftEngine';
@@ -43,6 +43,13 @@ export default function ChatPage() {
     (state) => state.typingByBoyfriend[boyfriendId ?? ''] ?? 'idle',
   );
   const addUserMessage = useChatStore((state) => state.addUserMessage);
+  const quickReplies = useChatStore(
+    (state) => state.quickRepliesByBoyfriend[boyfriendId ?? ''] ?? [],
+  );
+  const serviceError = useChatStore(
+    (state) => state.errorByBoyfriend[boyfriendId ?? ''] ?? null,
+  );
+  const retryLastReply = useChatStore((state) => state.retryLastReply);
   const messages = useMemo(
     () => allMessages.filter((message) => message.sessionId === boyfriendId),
     [allMessages, boyfriendId],
@@ -50,6 +57,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasUserMessage = messages.some((message) => message.sender === 'user');
 
   // 进入聊天记录交互
   useEffect(() => {
@@ -98,6 +106,7 @@ export default function ChatPage() {
           whileTap={{ scale: 0.9 }}
           onClick={() => navigate(-1)}
           className="p-1.5 rounded-xl hover:bg-surface-100"
+          aria-label="返回上一页"
         >
           <ArrowLeft size={20} className="text-text-primary" />
         </motion.button>
@@ -119,6 +128,17 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {serviceError && (
+          <div className="flex items-start gap-2.5 rounded-2xl border border-warm-200 bg-warm-50 px-3.5 py-3 text-xs leading-5 text-[#714029]" role="status">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p>DeepSeek 暂时未连接，本轮已使用安全降级回复，你的消息仍已保存。</p>
+              <button type="button" onClick={() => boyfriendId && retryLastReply(boyfriendId)} className="mt-1 inline-flex items-center gap-1 font-bold text-[#8d3f24] underline underline-offset-2">
+                <RefreshCw size={12} />重试真实 AI
+              </button>
+            </div>
+          </div>
+        )}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="w-16 h-16 rounded-2xl bg-surface-200 flex items-center justify-center mb-3 overflow-hidden">
@@ -204,6 +224,19 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
+      {!hasUserMessage && quickReplies.length > 0 && (
+        <div className="border-t border-surface-200 bg-white px-4 pt-3">
+          <p className="mb-2 text-[11px] font-semibold text-text-secondary">可以这样开始，也可以自由输入</p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {quickReplies.map((reply) => (
+              <button key={reply} type="button" onClick={() => addUserMessage(reply, boyfriendId)} className="min-h-10 shrink-0 rounded-full border border-brand-200 bg-brand-50 px-3.5 text-xs font-semibold text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-200">
+                {reply}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="px-4 py-3 border-t border-surface-200 bg-white/80 backdrop-blur">
         <div className="flex items-center gap-2 bg-surface-50 rounded-2xl px-4 py-2 border border-surface-200">
@@ -227,6 +260,7 @@ export default function ChatPage() {
                 ? 'bg-brand-500 text-white'
                 : 'bg-surface-200 text-text-tertiary'
             }`}
+            aria-label="发送消息"
           >
             <Send size={16} />
           </motion.button>

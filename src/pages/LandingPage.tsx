@@ -145,7 +145,7 @@ export default function LandingPage() {
               <ArrowRight size={19} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <p className="mt-3 text-center text-xs text-[#6f6872] sm:text-left">
-              无需注册 · 约 3 分钟 · 免费体验
+              下一步完成 3 道情景题 · 无需注册 · 免费体验
             </p>
           </div>
         </motion.div>

@@ -9,6 +9,7 @@ import type { InteractionRecord } from './evolutionEngine';
 import type { RelationshipScores, RelationshipStage } from './relationshipEngine';
 import type { RelationshipPreview } from './onboardingEngine';
 import type { DailyCheckIn, StreakInfo, EmotionalNudge } from './engagementEngine';
+import type { ScenarioMatchResult } from './scenarioMatchEngine';
 
 // ─── 纯引擎导入 ───
 import { computePersonality, synthesizeAttributes, describePersonality } from './personalityEngine';
@@ -93,6 +94,33 @@ export function createBoyfriend(): BoyfriendProfile | null {
   // 自动持久化
   autoSave();
 
+  return generated;
+}
+
+/** 根据三道情景题的稳定结果创建首次匹配关系。 */
+export function createScenarioBoyfriend(result: ScenarioMatchResult): BoyfriendProfile | null {
+  const match = boyfriends.find((boyfriend) => boyfriend.typeId === result.typeId);
+  if (!match) return null;
+
+  const generated: BoyfriendProfile = {
+    ...match,
+    compatibility: {
+      ...match.compatibility,
+      baseScore: result.score,
+      description: `${result.summary}${result.reasons.join('；')}。`,
+    },
+  };
+
+  useBoyfriendStore.setState({
+    personality: result.personality,
+    currentBoyfriend: generated,
+    relationshipLevel: 1,
+    interactionHistory: [],
+    relationshipScores: createRelationshipScores(),
+  });
+  _addInteraction('page_view', generated.id, '完成三道情景题并进入首次相遇');
+  trackBoyfriendCreated(generated.typeId, result.score);
+  autoSave();
   return generated;
 }
 

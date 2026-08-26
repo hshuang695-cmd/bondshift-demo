@@ -15,6 +15,7 @@ export interface ChatMessage {
   emotion?: EmotionTag;
   timestamp: number;
   isRead: boolean;
+  source?: 'deepseek' | 'fallback' | 'seed';
 }
 
 export interface ChatSession {
