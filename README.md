@@ -16,7 +16,7 @@ npm run dev
 在 Netlify 项目设置的环境变量中配置：
 
 - `DEEPSEEK_API_KEY`：必填，只能存在于服务端，不使用 `VITE_` 前缀。
-- `DEEPSEEK_MODEL`：可选，默认 `deepseek-chat`。
+- `DEEPSEEK_MODEL`：可选，默认 `deepseek-v4-flash`。
 - `DEEPSEEK_API_URL`：可选，默认 DeepSeek Chat Completions 地址。
 
 本地变量格式见 `.env.example`。不要提交真实密钥。
