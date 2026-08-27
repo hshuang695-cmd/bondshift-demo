@@ -26,6 +26,7 @@
 - 系统与工作区 Python 均未安装 Playwright 模块：改用 Codex 工作区已内置的 Node Playwright 运行同一浏览器验收，不向项目安装额外依赖。
 - 内置 Node Playwright 没有单独下载 Chromium：测试显式使用本机 Google Chrome 的可执行文件，继续保持零依赖安装。
 - 首次匹配结果截图发生在路由淡入动画完成前，截图为空白：在可见性断言后增加 700ms 动画完成等待再取证。
+- 生产环境的Netlify Function直连成功并返回DeepSeek回复，但`/api/chat`代理最初返回404：将Function代理规则写入发布目录的`public/_redirects`并置于SPA通配规则之前。
 
 ## Status
-**Completed** - 8月23日至26日本地开发、验证与文档均已完成；生产真实DeepSeek调用等待Netlify环境变量配置与部署后冒烟测试。
+**Deployment validation in progress** - DeepSeek Function直连已通过，正在修复`/api/chat`生产代理并重新部署验收。
