@@ -84,7 +84,7 @@ export default function HomePage() {
               <div
                 className="absolute inset-0 opacity-20"
                 style={{
-                  backgroundImage: 'radial-gradient(circle at 30% 50%, #fbf7f4 0%, transparent 60%)',
+                  backgroundImage: 'radial-gradient(circle at 30% 50%, var(--color-surface-50) 0%, transparent 60%)',
                 }}
               />
               <div className="relative z-10 flex items-end gap-4 w-full">
