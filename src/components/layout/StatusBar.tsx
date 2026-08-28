@@ -16,7 +16,7 @@ export default function StatusBar() {
   }, []);
 
   return (
-    <div className="flex items-center justify-between px-6 h-11 select-none">
+    <div className="flex items-center justify-between px-6 h-11 select-none lg:hidden">
       <span className="text-xs font-semibold text-text-primary w-14 text-left">
         {time}
       </span>

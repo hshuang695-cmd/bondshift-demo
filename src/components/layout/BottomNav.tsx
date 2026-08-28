@@ -27,7 +27,7 @@ export default function BottomNav() {
   const activeTab = getTabFromPath(currentPath);
 
   return (
-    <nav className="glass border-t border-surface-300/60 pb-safe">
+    <nav className="glass border-t border-brand-200/60 pb-safe lg:hidden">
       <div className="flex items-center justify-around relative">
         {TAB_CONFIG.map((tab) => {
           const isActive = tab.key === activeTab;
@@ -61,15 +61,13 @@ export default function BottomNav() {
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
               </motion.div>
-              <motion.span
-                className="text-[10px] font-semibold tracking-tight"
-                animate={{
-                  color: isActive ? '#e8547c' : '#b0b0b8',
-                  opacity: isActive ? 1 : 0.8,
-                }}
+              <span
+                className={`text-[10px] font-semibold tracking-tight transition-colors ${
+                  isActive ? 'text-brand-500' : 'text-text-tertiary'
+                }`}
               >
                 {tab.label}
-              </motion.span>
+              </span>
             </button>
           );
         })}
