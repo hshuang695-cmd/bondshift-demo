@@ -1,6 +1,6 @@
 # BONDSHIFT 当日优化执行计划（交付 Codex · 2026-08-28 收尾批）
 
-> **执行前提**：本地基线 `a51090d`（main，领先 origin/main 11 个提交）；工作区干净；质量门禁全绿（lint 0/0、build 237.64KB、两套 e2e PASS）。
+> **执行前提**：本地基线 `085cb79`（main，领先 origin/main 12 个提交，含并行会话的 `965fa6e [D1-2 补遗]` 字体 Latin 子集限定）；工作区干净；质量门禁全绿（lint 0/0、build 主 JS 达标、两套 e2e PASS）。
 > **执行纪律**：沿用 PRD v1.3 附录 B（B-6 每任务一 commit、B-4 门禁命令、B-1 改动白名单）；完成后写入当日日报。
 > **背景数据**：今日完成率 94.4%（17/18）；PRD 整体 60.7%；新版浅色 Dreamcore 视觉尚未上线公开 Netlify 站点。
 
@@ -16,7 +16,7 @@
 
 **执行步骤**：
 1. 门禁复核（推送前最后一次确认）：`npm run lint` → `npm run build` → `npm run preview -- --host 127.0.0.1 &` → `node tests/e2e-onboarding.mjs` → `node tests/e2e-desktop-responsive.mjs`，四项全绿才继续。
-2. `git push origin main`（推送 11 个提交：`d6764eb`→`a51090d`，含批 A/批 B 全部实施、终审报告、PRD v1.3）。
+2. `git push origin main`（推送 12 个提交：`d6764eb`→`085cb79`，含批 A/批 B 全部实施、D1-2 补遗、终审报告、PRD v1.3、本计划）。
 3. 等待 Netlify 自动构建（现有推送即部署流程，`netlify.toml` 勿动）；通过 `git rev-list --count origin/main..main` 确认归零。
 4. 生产冒烟（可脚本化项，用 playwright 对生产 URL 执行）：
    - 落地页渲染浅色新视觉（brand-500 `#B45A78`、Cloud White 底、衬线标题），控制台 0 错误；
