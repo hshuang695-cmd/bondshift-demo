@@ -144,11 +144,12 @@ export default function ReportPage() {
         subtitle={relationshipScore ? `综合评级 ${relationshipScore.rank}` : '加载中...'}
       />
 
+      {/* 综合分大卡（全宽） */}
       <div className="px-5 mb-5">
         <div className="card p-5 text-center">
           <div className="relative inline-flex items-center justify-center mb-3">
             <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#f5e8ed" strokeWidth="8" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--color-surface-300)" strokeWidth="8" />
               <motion.circle
                 cx="50" cy="50" r="42" fill="none" stroke="url(#scoreGradient)" strokeWidth="8"
                 strokeLinecap="round"
@@ -159,8 +160,8 @@ export default function ReportPage() {
               />
               <defs>
                 <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#e8547c" />
-                  <stop offset="100%" stopColor="#4f5fcf" />
+                  <stop offset="0%" stopColor="var(--color-brand-500)" />
+                  <stop offset="100%" stopColor="var(--color-brand-200)" />
                 </linearGradient>
               </defs>
             </svg>
@@ -177,13 +178,16 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      {/* 桌面图表两列网格 */}
+      <div className="px-5 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+
+      <div className="mb-5 lg:mb-0">
         <div className="grid grid-cols-2 gap-3">
           {[
             { icon: Heart, label: '互动会话', value: interactionStats?.totalSessions ?? 0, color: 'text-brand-500', bg: 'bg-brand-50' },
-            { icon: MessageCircle, label: '消息总数', value: interactionStats?.totalMessages ?? 0, color: 'text-accent-500', bg: 'bg-accent-50' },
-            { icon: Clock, label: '平均时长', value: `${avgSessionMin}min`, color: 'text-warm-500', bg: 'bg-warm-50' },
-            { icon: Zap, label: '语音通话', value: `${interactionStats?.voiceCallCount ?? 0}次`, color: 'text-accent-500', bg: 'bg-accent-50' },
+            { icon: MessageCircle, label: '消息总数', value: interactionStats?.totalMessages ?? 0, color: 'text-accent-600', bg: 'bg-accent-100' },
+            { icon: Clock, label: '平均时长', value: `${avgSessionMin}min`, color: 'text-warm-500', bg: 'bg-cream-100' },
+            { icon: Zap, label: '语音通话', value: `${interactionStats?.voiceCallCount ?? 0}次`, color: 'text-accent-600', bg: 'bg-accent-100' },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -202,15 +206,15 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <p className="text-xs text-text-secondary font-semibold mb-4 uppercase tracking-wider">
             关系进化三维
           </p>
           {[
-            { key: 'trust', label: '信任值', emoji: '🛡️', value: relationshipScores.trust, color: '#4f5fcf' },
-            { key: 'intimacy', label: '亲密度', emoji: '💕', value: relationshipScores.intimacy, color: '#e8547c' },
-            { key: 'stability', label: '稳定性', emoji: '⚓', value: relationshipScores.stability, color: '#f56b33' },
+            { key: 'trust', label: '信任值', emoji: '🛡️', value: relationshipScores.trust, color: 'var(--color-accent-500)' },
+            { key: 'intimacy', label: '亲密度', emoji: '💕', value: relationshipScores.intimacy, color: 'var(--color-brand-500)' },
+            { key: 'stability', label: '稳定性', emoji: '⚓', value: relationshipScores.stability, color: 'var(--color-warm-500)' },
           ].map((dim, i) => (
             <div key={dim.key} className="flex items-center gap-3 mb-3 last:mb-0">
               <span className="text-sm w-5">{dim.emoji}</span>
@@ -237,7 +241,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <p className="text-xs text-text-secondary font-semibold mb-4 uppercase tracking-wider">
             本周互动
@@ -254,8 +258,8 @@ export default function ReportPage() {
                     className="w-full rounded-t-lg mt-auto"
                     style={{
                       background: i === weeklyStats.length - 1
-                        ? 'linear-gradient(180deg, #e8547c 0%, #f490b0 100%)'
-                        : 'linear-gradient(180deg, #4f5fcf 0%, #7d95e3 100%)',
+                        ? 'linear-gradient(180deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%)'
+                        : 'linear-gradient(180deg, var(--color-accent-500) 0%, var(--color-accent-300) 100%)',
                     }}
                   />
                   <span className="text-[10px] text-text-tertiary">
@@ -268,7 +272,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <p className="text-xs text-text-secondary font-semibold mb-3 uppercase tracking-wider">
             记忆话题
@@ -295,7 +299,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Calendar size={16} className="text-brand-500" />
@@ -326,10 +330,10 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-accent-500" />
+            <TrendingUp size={16} className="text-accent-600" />
             <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider">
               依恋增长曲线
             </p>
@@ -346,8 +350,8 @@ export default function ReportPage() {
                     className="w-full rounded-t-lg mt-auto"
                     style={{
                       background: i === attachmentGrowth.length - 1
-                        ? 'linear-gradient(180deg, #e8547c 0%, #f490b0 100%)'
-                        : 'linear-gradient(180deg, #4f5fcf 0%, #7d95e3 100%)',
+                        ? 'linear-gradient(180deg, var(--color-brand-500) 0%, var(--color-brand-300) 100%)'
+                        : 'linear-gradient(180deg, var(--color-accent-500) 0%, var(--color-accent-300) 100%)',
                     }}
                   />
                   <span className="text-[10px] text-text-tertiary">{point.date}</span>
@@ -355,7 +359,7 @@ export default function ReportPage() {
               );
             })}
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-surface-100">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-brand-100/70">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-accent-500" />
               <span className="text-[10px] text-text-tertiary">依恋度</span>
@@ -368,7 +372,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5 mb-5">
+      <div className="mb-5 lg:mb-0">
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={16} className="text-warm-500" />
@@ -407,7 +411,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="px-5">
+      <div className="lg:mb-0">
         <div className="card p-5">
           <p className="text-xs text-text-secondary font-semibold mb-4 uppercase tracking-wider">
             能力雷达
@@ -431,6 +435,8 @@ export default function ReportPage() {
           </div>
         </div>
       </div>
+
+      </div>{/* /lg:grid-cols-2 */}
     </div>
   );
 }
