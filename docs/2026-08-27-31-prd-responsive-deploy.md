@@ -12,7 +12,7 @@
 | 部署目标 | Netlify 站点 `bondshift-demo`（配置已存在于 `netlify.toml`） |
 | 技术方案冻结 | **事件驱动冻结（方案 A 条款）**：批 A（第 6 章 D1 全部）已于 8/28 完成并通过验收，**核心技术方案自此冻结**——布局策略（lg 双形态容器 + 组件级 lg: 前缀）、令牌表（3.1.1）、依赖清单（B-3 白名单）不得再变更；页面级视觉细节允许调整至 9/1 18:00；9/2 12:00 起全量代码冻结（仅允许修复阻断性问题） |
 
-> **Codex 阅读指引（v1.3）**：本文档是唯一需求来源。**第 6 章中标注 ✅ 的任务已全部完成并提交，禁止重复实施**（重复实施会破坏已有成果——例如重写 `@theme` 会覆盖已迁移的 Dreamcore 令牌）。你的剩余工作是第 6 章中标注 ⬜ 的任务：D1-8 截图补齐、D4 质量冲刺、D5 部署上线。第 2/3 章的需求描述与设计规范对剩余任务仍然有效，其中已完成的描述以「已完成（commit xxx）」标注。第 8 章附录 B 是你必须遵守的硬性约束。凡本文档未提及的功能一律不做（见 2.5 超出范围清单）。
+> **Codex 阅读指引（v1.3）**：本文档是唯一需求来源。**第 6 章中标注 ✅ 的任务已全部完成，禁止重复实施**（重复实施会破坏已有成果——例如重写 `@theme` 会覆盖已迁移的 Dreamcore 令牌）。截至 8/29，D1-8-R、D4-3-R、D4-4 已完成；剩余工作是第 6 章中的 D4 性能/人工 QA 与 D5 部署上线。第 2/3 章的需求描述与设计规范对剩余任务仍然有效，其中已完成的描述以「已完成」或 commit 标注。第 8 章附录 B 是必须遵守的硬性约束。凡本文档未提及的功能一律不做（见 2.5 超出范围清单）。
 
 ---
 
@@ -138,8 +138,8 @@ BONDSHIFT 是一款"可换乘男友模拟器"——面向女性用户的 AI 人�
 | I-3 | 触控目标 ≥ 44×44px | ✅ 原有满足 |
 | I-4 | `MotionConfig reducedMotion="user"`（App.tsx）+ CSS `prefers-reduced-motion` 兜底 | ✅ 已实施 |
 | I-5 | ChatPage `viewport-full` utility（100vh + `@supports` 100dvh 回退） | ✅ 已实施 |
-| I-6 | 无水平溢出（9 档宽度） | ⬜ D4-3/D4-4 验收项（375/768/1440 已过，320/834/1024/1280/1920 待补） |
-| I-7 | 布局切换动画安全（viewport 横跳无残影） | ⬜ D4-4 验收项（playwright viewport 循环脚本，见 6 章） |
+| I-6 | 无水平溢出（9 档宽度） | 🟡 320/375/768/999/1025/1440 已过；390/834/1024/1280/1920 全页矩阵留待 D5-1 |
+| I-7 | 布局切换动画安全（viewport 横跳无残影） | ✅ 8/29 在 999↔1025px 循环 10 次通过，导航互斥且无 tabIndicator 残影 |
 | I-8 | 动效 ≤ 600ms、无强刺激 | ✅ 已实施（现有动效 0.2–0.65s 柔和曲线） |
 
 ### 2.4 视觉系统改版需求（Dreamcore Romanticism）
@@ -347,7 +347,7 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 | D2-2 SetupPage 视觉升级 | `bf5f781` | e2e 三道题流程通过 |
 | D2-3 MatchPage 浅色重构 | `bf5f781` | 截图 match-1440/375.png；e2e「修改答案」「90%」断言通过 |
 | D3-1~D3-5 五页响应式+新视觉 | `58e5227` | 截图 home/report/settings/swap/chat；e2e 响应式骨架通过 |
-| D1-8 响应式截图基线 | `bc584bf` | **部分完成：12/24 张**（缺口见 6.2 第一项） |
+| D1-8 响应式截图基线 | `bc584bf` + 8/29 本地检查点待确认 | ✅ 24/24 张标准断点截图，另有 `chat-1920.png`；8/29 同步修复 5 张误命名/过期证据 |
 | D4-6 桌面视口 e2e | `bc584bf` | tests/e2e-desktop-responsive.mjs PASS |
 | D2-4 冻结前技术验证 | 被 D4 整体取代（方案 A） | — |
 | D1-9 / D3-6 / D4-7 / D5-6 | 🅿️ 停车场（CH-07） | 不实施 |
@@ -358,9 +358,18 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 
 | 任务 | 内容 | 验收标准 | 边界条件 |
 |---|---|---|---|
-| D1-8-R 截图补齐 | 补拍 12 张缺口截图：setup-375/768/1440、chat-375/768/1440（已有 1920）、swap-768/1440（已有 375）、settings-375/768（已有 1440）、match-768（已有 375/1440）、landing-375/768（已有 1440） | `docs/evidence/after/responsive/` 达到 8 页 × 3 档基本覆盖（24 张）；命名 `<页面>-<宽度>.png`；chat/match 页需先在同一浏览器上下文走完 setup 流程再截图（localStorage 状态依赖，参考 e2e-desktop-responsive.mjs 的做法） | 用 playwright 截图脚本（可放 `tests/` 或临时脚本，不新增依赖）；截图前等待 900–1600ms 动画收尾；不修改任何 src/ 文件 |
+| D1-8-R 截图补齐 | 补拍 14 张缺口截图：setup-375/768/1440、chat-375/768/1440（另有 1920 证据）、swap-768/1440（已有 375）、settings-375/768（已有 1440）、match-768（已有 375/1440）、landing-375/768（已有 1440）、report-768（已有 375/1440） | `docs/evidence/after/responsive/` 达到 8 页 × 3 档完整覆盖（24 张，另保留 chat-1920）；命名 `<页面>-<宽度>.png`；chat/match 页需先在同一浏览器上下文走完 setup 流程再截图（localStorage 状态依赖，参考 e2e-desktop-responsive.mjs 的做法） | 用 playwright 截图脚本（可放 `tests/` 或临时脚本，不新增依赖）；截图前等待 900–1600ms 动画收尾；不修改任何 src/ 文件 |
 | D4-3-R e2e 全断点回归 | 在 320/768/1440 三档重跑 `e2e-onboarding.mjs` 主流程（参数化 viewport，临时运行不落盘新增用例） | 三档全 PASS，console 错误 0 | 只改运行参数不改脚本断言；若 320 出现水平溢出，修复仅限 CSS 层且过三件套门禁 |
 | D4-4 viewport 横跳测试 | playwright 脚本：viewport 在 999↔1025px 循环切换 10 次，检查 SideNav/BottomNav 无同时可见、tabIndicator 无残影 | 10 次循环后 DOM 断言通过（SideNav 与 BottomNav 互斥、无孤儿 layoutId 元素） | 若 I-7 残影出现，允许将 tabIndicator 从 layoutId 降级为条件渲染（I-7 预案）；脚本可并入 e2e-desktop-responsive.mjs |
+
+**8/29 执行结果（2026-08-29 更新）**
+
+| 任务 | 状态 | 结果与证据 |
+|---|---|---|
+| D1-8-R | ✅ 已完成 | `docs/evidence/after/responsive/` 共 25 张：8 页 × 375/768/1440 = 24 张，另有 `chat-1920.png`；`tests/capture-responsive-evidence.mjs` 可复验 |
+| D4-3-R | ✅ 已完成 | 320/768/1440 三档首次体验全 PASS；情景题、顾怀瑾 90% 匹配、首次见面与无水平溢出断言通过；console/page error = 0 |
+| D4-4 | ✅ 已完成 | 999↔1025px 横跳 10 轮 PASS；SideNav/BottomNav 始终互斥，移动 tabIndicator 在桌面形态不可见 |
+| 质量门禁 | ✅ 已完成 | Lint 0 error；Build 成功；主 JS 237.64KB / gzip 76.48KB；woff2 161.18KB；原有两套 e2e 均 PASS |
 
 **8/30（周日）· 跨浏览器 + 性能冲刺**
 
@@ -406,7 +415,7 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 |---|---|---|---|---|---|
 | R1 | 移动端功能回归 | 中 | 高 | 活跃 | 每日三件套 + e2e-onboarding；回归优先于一切视觉优化 |
 | R2 | 冻结后发现布局方案不可行 | — | — | **已解除** | 批 A 已完成并验收，布局方案（令牌层+容器双形态+lg 前缀）已被实践验证 |
-| R3 | layoutId 跨断点残影 | 低 | 中 | 活跃 | D4-4 用脚本复现；I-7 降级预案（条件渲染）不变 |
+| R3 | layoutId 跨断点残影 | 低 | 中 | ✅ 8/29 验收关闭 | 999↔1025px 循环 10 次未复现；I-7 降级预案保留 |
 | R4 | Recharts 高度塌陷 | — | — | **作废（CH-04）** | 项目无 recharts；报告页为纯 CSS 实现，无此风险 |
 | R5 | Safari 15 兼容 | 中 | 中 | 活跃 | I-5 @supports 回退已实施；D4-1-R 监督人手测四点 |
 | R6 | 密钥未及时配置 | 中 | 高 | 活跃 | D5-2 执行方已明确为监督人；24h 不可得则站点照常发布、AI 验收顺延记日报 |
@@ -451,12 +460,14 @@ src/
 
 tests/
 ├── e2e-onboarding.mjs                # 375×812 主流程 e2e（PASS）
-└── e2e-desktop-responsive.mjs        # ✅ 桌面/平板/移动骨架 e2e（PASS，bc584bf 新增）
+├── e2e-desktop-responsive.mjs        # ✅ 桌面/平板/移动骨架 e2e（PASS；8/29 修复移动截图时机）
+├── e2e-responsive-quality.mjs        # ✅ 320/768/1440 主流程 + 999↔1025 横跳门禁
+└── capture-responsive-evidence.mjs   # ✅ 响应式证据生成器（含状态依赖页面）
 
 netlify/functions/chat.mjs            # DeepSeek 代理（禁止改动）
 docs/BONDSHIFT-UI-Design-Prompts.md   # ★ 视觉唯一权威来源
 docs/baseline.md                      # 质量基线（D5-5 更新）
-docs/evidence/after/responsive/       # ✅ 已有 12 张截图；D1-8-R 补齐至 24 张
+docs/evidence/after/responsive/       # ✅ 24/24 张标准断点截图 + chat-1920，共 25 张
 deliverables/product-strategy/        # 审计报告与终审报告（参考文档，勿删）
 ```
 
