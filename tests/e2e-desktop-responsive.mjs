@@ -93,10 +93,15 @@ for (const [label, url] of [
   ['设置', '/settings'],
 ]) {
   await mobile.goto(`${BASE}${url}`, { waitUntil: 'networkidle' });
+  await mobile.waitForTimeout(label === '报告' ? 1600 : 900);
   await assertNoHorizontalOverflow(mobile, `${url} @375`);
+  if (label === '换乘') {
+    await mobile.screenshot({ path: path.join(evidence, 'swap-375.png'), fullPage: true });
+  }
+  if (label === '报告') {
+    await mobile.screenshot({ path: path.join(evidence, 'report-375.png'), fullPage: true });
+  }
 }
-await mobile.screenshot({ path: path.join(evidence, 'swap-375.png'), fullPage: true });
-await mobile.screenshot({ path: path.join(evidence, 'report-375.png'), fullPage: true });
 
 // 平板档（768×1024）
 const tablet = await browser.newPage({ viewport: { width: 768, height: 1024 } });
