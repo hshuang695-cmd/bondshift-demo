@@ -24,6 +24,32 @@
 
 超出上述边界的任何改动（尤其 JS 依赖瘦身、路由重构、lucide 图标库调整）→ **必须先停下询问监督人**，不得自行实施。
 
+### 一.5 增补授权（2026-08-31 13:50，R2 第二线裁决后签发）
+
+**背景**：R2 首选策略（字体 CSS 拆分）经诊断不可行——落地页实际加载 7/9 权重且全部在用；剩余 2 权重（Fraunces 600 normal、Cormorant Garamond 500 normal）全站无消费者且不产生网络请求，删除无 LCP 收益。监督人完成替代诊断（dist chunk 取证 + Lighthouse JSON 分析），确认移动端 LCP 3.291s 的两大成因：① 模拟节流下主包（237KB）执行完毕后才串行拉取 LandingPage chunk（11.86KB）与其静态依赖 createLucideIcon chunk（121KB）；② LCP 元素（Hero 主标题 `<h1>`）包裹于 `motion.div` 的 `opacity: 0→1` 渐入动画（0.55s），推迟 LCP 注册（FCP 1.8s → LCP 3.29s）。
+
+| # | 授权项 | 允许的改动 | 禁止事项 |
+|---|---|---|---|
+| A-4 | `src/routes/index.tsx`（B-1 白名单外，特此豁免） | **仅**将 LandingPage 从 `lazy(() => import(...))` 改为顶部静态 import；其余 9 个路由的 lazy 结构与全部路由路径保持不变 | 不得改动任何路由路径、不得调整其他路由的加载方式、不得触碰 vite.config.ts |
+| A-5 | `src/pages/LandingPage.tsx` Hero 区 `motion.div`（属 B-1 白名单内，无需豁免，仅作说明） | 将入场动画改为 transform-only（`initial` 移除 `opacity: 0`，保留 y 位移；时长 ≤600ms，I-8 合规） | 不得改动文案（B-5）、不得改字体/色彩令牌、右侧卡片区动画不动 |
+
+**同时裁决**：①「9 个字体权重不得删除」限制维持，理由修正为「删除无 LCP 收益」；2 个未用 import 记入 D5 后清理清单（P2）。② 不得将未用字体 import 伪依赖迁移至 ChatPage/ReportPage（Codex 判断正确）。③ R2 首选中止不计入 M3 轮次。④ 若 A-4+A-5 修复后复测 LCP 仍 ≥2.5s，即构成 M3 第 2 轮不达标 → 触发 fail-fast：停止优化、问题记 `docs/baseline.md` 待办、D4-2 以「Performance 移动 ≥85 达标（90），LCP 为已知问题」收口，不阻塞 D5 主线。
+
+### 一.6 终局裁决（2026-08-31 15:25，R2 测量后签发）
+
+**A-4 撤销**：静态导入实测构建主包 **366.15KB（gzip 118.46KB）**——LandingPage 与 createLucideIcon（121KB）等 chunk 被并入主包，同时击穿 4.3 的 300KB/90KB（gzip）门槛与 R9 的 273KB（15% 恶化上限）。Codex 在 R2 构建后按异常即停拒绝提交，判断正确。
+
+**A-4' 替代方案（监督人已直接实施于工作区）**：`src/routes/index.tsx` 改为模块求值时发起落地页 chunk 预载（`const landingPagePromise = import('../pages/LandingPage'); const LandingPage = lazy(() => landingPagePromise);`），保持 9 个路由懒加载与分包结构不变。实测主包 **237.65KB（+0.01KB）**，LandingPage chunk 独立（11.84KB）。
+
+**LCP 终局测量**：A-4'+A-5 状态下移动端两次测量 LCP = 3.25s / 3.30s（修复前 3.291s），**无实质改善**——瓶颈为主包（74KB gzip）到达+执行的串行关键路径，进一步优化需主包代码分割/图标按页分割（超出现有白名单与冻结窗口）。
+
+**M3 fail-fast 生效（第 2 轮）**：8/30 首测（3.23s）+ 8/31 修复轮复测（≥3.25s）连续 2 轮不达标。裁决：
+1. **停止一切 LCP 优化**，禁止继续尝试新手段；
+2. LCP 记 `docs/baseline.md` 已知问题（D5 后优化专项候选：主包代码分割、createLucideIcon 121KB chunk 按页分割）；
+3. D4-2 以「Performance 移动 ≥85（R1 官方实测 90）+ A11y/BP/SEO ≥90 + LCP 3.3s 已知问题」收口，**不阻塞 D5 主线**；
+4. A-4'+A-5 保留（预算中性、反模式清除）：A-5 消除 LCP 元素渐隐动画；A-4' 理论上提前 chunk 拉取（实测收益被噪声掩盖，保留）；
+5. 官方复测若移动 Performance <85（监督人本机两次 81/82，疑似测量时机器负载压低；R1 官方为 90）：允许复测 1 次并报告两次结果，两次均 <85 则停下报告监督人，不得自行优化。
+
 ## 二、今日目标
 
 1. **P0-1 · SEO 修复**：meta description + robots.txt → 两端 SEO 预期 83→100。

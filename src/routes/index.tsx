@@ -1,10 +1,14 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
+// 落地页是首访入口路由：在模块求值时立即发起 chunk 预载（与主包执行并发），
+// 避免等 React 挂载后才串行拉取，同时保持路由懒加载与分包结构不变。
+const landingPagePromise = import('../pages/LandingPage');
+const LandingPage = lazy(() => landingPagePromise);
+
 const AppShell = lazy(() => import('../components/layout/AppShell'));
 const ProductRuntime = lazy(() => import('../components/ProductRuntime'));
 const SetupPage = lazy(() => import('../pages/SetupPage'));
-const LandingPage = lazy(() => import('../pages/LandingPage'));
 const HomePage = lazy(() => import('../pages/HomePage'));
 const SwapPage = lazy(() => import('../pages/SwapPage'));
 const ReportPage = lazy(() => import('../pages/ReportPage'));

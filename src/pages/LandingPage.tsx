@@ -123,8 +123,8 @@ export default function LandingPage() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pb-20 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-[1.02fr_0.98fr] lg:gap-20 lg:pb-28 lg:pt-20">
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 18 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
           className="max-w-xl"
         >
