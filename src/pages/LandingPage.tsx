@@ -212,7 +212,7 @@ export default function LandingPage() {
                     <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                       <Icon size={21} />
                     </span>
-                    <span className="font-script text-lg text-brand-500">0{index + 1}</span>
+                    <span className="font-script text-lg text-text-secondary">0{index + 1}</span>
                   </div>
                   <h3 className="mt-6 text-lg font-bold text-text-primary">{step.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-text-secondary">{step.description}</p>
