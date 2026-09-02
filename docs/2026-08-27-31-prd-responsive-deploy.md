@@ -156,7 +156,7 @@ BONDSHIFT 是一款"可换乘男友模拟器"——面向女性用户的 AI 人�
 | I-3 | 触控目标 ≥ 44×44px | ✅ 原有满足 |
 | I-4 | `MotionConfig reducedMotion="user"`（App.tsx）+ CSS `prefers-reduced-motion` 兜底 | ✅ 已实施 |
 | I-5 | ChatPage `viewport-full` utility（100vh + `@supports` 100dvh 回退） | ✅ 已实施 |
-| I-6 | 无水平溢出（9 档宽度） | 🟡 320/375/768/999/1025/1440 已过；390/834/1024/1280/1920 全页矩阵留待 D5-1 |
+| I-6 | 无水平溢出（9 档宽度） | ✅ 320/375/390/768/834/1024/1280/1440/1920 全页矩阵 72/72 PASS；证据：`docs/evidence/after/responsive/matrix/` |
 | I-7 | 布局切换动画安全（viewport 横跳无残影） | ✅ 8/29 在 999↔1025px 循环 10 次通过，导航互斥且无 tabIndicator 残影 |
 | I-8 | 动效 ≤ 600ms、无强刺激 | ✅ 已实施（现有动效 0.2–0.65s 柔和曲线） |
 
@@ -369,6 +369,7 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 | D4-3-R 三档主流程 e2e | `17df882`（8/29 检查点） | ✅ 320/768/1440 三档 onboarding 全 PASS，console/page error = 0 |
 | D4-4 viewport 横跳测试 | `17df882`（8/29 检查点） | ✅ 999↔1025px 横跳 10 轮 PASS；SideNav/BottomNav 互斥、无 tabIndicator 残影 |
 | D4-6 桌面视口 e2e | `bc584bf` | tests/e2e-desktop-responsive.mjs PASS |
+| D4-1-R Safari 兼容四点 | 随 `[D5-1]` 归档（2026-09-03 补执行） | ✅ Playwright WebKit 自动化四点全 PASS；报告：`docs/2026-09-03-d41r-safari-test-report.md`；证据：`docs/evidence/after/safari/` |
 | D2-4 冻结前技术验证 | 被 D4 整体取代（方案 A） | — |
 | D1-9 / D3-6 / D4-7 / D5-6 | 🅿️ 停车场（CH-07） | 不实施 |
 
@@ -404,7 +405,7 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 | 任务 | 状态 | 结果与证据 |
 |---|---|---|
 | D4-2 Lighthouse | ✅ 测量完成（9/12 达标，3 项转 8/31 修复） | 移动端 92/95/100/83，LCP 3.23s、CLS 0；桌面端 100/95/100/83，LCP 0.74s、CLS 0.0003；证据：`docs/evidence/after/responsive/lighthouse-mobile.json`、`docs/evidence/after/responsive/lighthouse-desktop.json` |
-| D4-1-R 跨浏览器 | ⏳ 顺延至 8/31 | Safari 15 四点与 iOS 真机抽查由监督人于 8/31 完成 |
+| D4-1-R 跨浏览器 | ✅ 2026-09-03 补执行完成 | Playwright WebKit 自动化四点全 PASS；报告：`docs/2026-09-03-d41r-safari-test-report.md`；证据：`docs/evidence/after/safari/` |
 | 冻结检查点 | ⏳ 顺延至 8/31 18:00 | D4-2 修复循环全绿后由监督人判定页面级视觉冻结是否生效 |
 
 **8/31（周一）· 缓冲与修复日（v1.4：吸收 8/30 顺延项）** —— 视 D4 结果动态分配
@@ -431,6 +432,14 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 | 任务 | 内容 | 验收标准 |
 |---|---|---|
 | D5-1 最终门禁 | 三件套 + 两套 e2e + 9 档宽度截图全量复核（320/375/390/768/834/1024/1280/1440/1920，8 页全过 `scrollWidth <= innerWidth`） | 全绿；截图目录完整；18:00 页面级视觉调整截止 |
+
+**9/1 执行结果（2026-09-03 补执行）**
+
+| 任务 | 状态 | 结果与证据 |
+|---|---|---|
+| D5-1 最终门禁 | ✅ 补执行完成 | Lint 0 error / 0 warning；Build 成功（主 JS 237.65KB / gzip 76.5KB）；三套 e2e 全 PASS；9档 × 8页零溢出矩阵72/72 PASS。证据：`docs/evidence/after/responsive/matrix/` |
+| D4-1-R Safari 兼容四点 | ✅ 补执行完成 | Playwright WebKit 自动化检查 100dvh、backdrop-filter、focus-visible、woff2 四点全 PASS。报告：`docs/2026-09-03-d41r-safari-test-report.md`；证据：`docs/evidence/after/safari/` |
+| 归档结论 | ✅ 收口 | I-6 与 D4-1-R 均有可复核证据；PRD 有效任务进度按监督人口径更新为22/28；全量代码冻结保持生效 |
 
 **9/2（周三）· 部署上线**
 
