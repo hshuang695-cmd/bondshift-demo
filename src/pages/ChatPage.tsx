@@ -8,6 +8,8 @@ import { recordInteraction } from '../core/bondshiftEngine';
 import { getAvatarByArchetype, getTypeEmoji } from '../core/avatarEngine';
 import type { BoyfriendTypeId } from '../types';
 
+const EMPTY_QUICK_REPLIES: string[] = [];
+
 function AvatarImg({ typeId, className }: { typeId: BoyfriendTypeId; className?: string }) {
   const avatar = getAvatarByArchetype(typeId);
   return (
@@ -46,8 +48,8 @@ export default function ChatPage() {
   );
   const addUserMessage = useChatStore((state) => state.addUserMessage);
   const quickReplies = useChatStore(
-    (state) => state.quickRepliesByBoyfriend[boyfriendId ?? ''] ?? [],
-  );
+    (state) => state.quickRepliesByBoyfriend[boyfriendId ?? ''],
+  ) ?? EMPTY_QUICK_REPLIES;
   const serviceError = useChatStore(
     (state) => state.errorByBoyfriend[boyfriendId ?? ''] ?? null,
   );
@@ -93,7 +95,7 @@ export default function ChatPage() {
     return (
       <div className="flex flex-col min-h-full items-center justify-center">
         <p className="text-text-tertiary text-sm">男友未找到</p>
-        <button onClick={() => navigate(-1)} className="mt-3 text-brand-500 text-sm font-medium">
+        <button onClick={() => navigate('/home')} className="mt-3 text-brand-500 text-sm font-medium">
           返回
         </button>
       </div>
@@ -108,7 +110,7 @@ export default function ChatPage() {
         <div className="flex items-center gap-3 px-4 py-3 border-b border-brand-100/70 bg-surface-0/80 backdrop-blur">
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/home')}
             className="rounded-full p-1.5 transition-colors hover:bg-brand-50"
             aria-label="返回上一页"
           >
