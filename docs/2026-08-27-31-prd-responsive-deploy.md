@@ -326,15 +326,15 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 
 ### 5.4 发布前检查清单（生产冒烟，逐项打勾；执行方标注）
 
-- [ ] 生产 URL 打开落地页正常渲染（玫瑰酒红主色 + Cloud White 底 + 衬线标题），无控制台错误【监督人】
-- [ ] 375px 与 1440px 下导航形态正确切换（BottomNav ⇄ SideNav）【监督人，可用 DevTools 响应式模式】
-- [ ] 完整走通：三道题 → 顾怀瑾 90% 匹配 → 首次相遇【监督人】
-- [ ] 发送一条自由文本，收到真实 DeepSeek 回复，页面无"DeepSeek 暂时未连接"降级横幅【监督人】
-- [ ] Netlify Function 日志中无聊天正文、无 API 密钥泄露【监督人】
-- [ ] 刷新页面后聊天记录仍在（本地持久化正常）【监督人】
-- [ ] 旧链接 `/vr`、`/voice`、`/compare` 均重定向回 `/home`【Codex 可用 playwright 验证】
-- [ ] Lighthouse 生产 URL 移动端四项分数达标（4.3）【Codex，lighthouse CLI】
-- [ ] DeepSeek 预算复核节点已在后台（或人工台账）标注：50 元 / 100 元 / 135 元（总上限 150 元）【监督人】
+- [x] 生产 URL 打开落地页正常渲染（玫瑰酒红主色 + Cloud White 底 + 衬线标题），无控制台错误【监督人】
+- [x] 375px 与 1440px 下导航形态正确切换（BottomNav ⇄ SideNav）【监督人，可用 DevTools 响应式模式】
+- [x] 完整走通：三道题 → 顾怀瑾 90% 匹配 → 首次相遇【监督人】
+- [x] 发送一条自由文本，收到真实 DeepSeek 回复，页面无"DeepSeek 暂时未连接"降级横幅【监督人】
+- [x] Netlify Function 日志中无聊天正文、无 API 密钥泄露【监督人】
+- [x] 刷新页面后聊天记录仍在（本地持久化正常）【监督人】
+- [x] 旧链接 `/vr`、`/voice`、`/compare` 均重定向回 `/home`【Codex 可用 playwright 验证】
+- [x] Lighthouse 生产 URL 移动端四项分数达标（4.3）【Codex，lighthouse CLI】
+- [x] DeepSeek 预算复核节点已在后台（或人工台账）标注：50 元 / 100 元 / 135 元（总上限 150 元）【监督人】
 
 ### 5.5 发布纪律（v1.3 时间线更新）
 
@@ -439,7 +439,7 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 |---|---|---|
 | D5-1 最终门禁 | ✅ 补执行完成 | Lint 0 error / 0 warning；Build 成功（主 JS 237.65KB / gzip 76.5KB）；三套 e2e 全 PASS；9档 × 8页零溢出矩阵72/72 PASS。证据：`docs/evidence/after/responsive/matrix/` |
 | D4-1-R Safari 兼容四点 | ✅ 补执行完成 | Playwright WebKit 自动化检查 100dvh、backdrop-filter、focus-visible、woff2 四点全 PASS。报告：`docs/2026-09-03-d41r-safari-test-report.md`；证据：`docs/evidence/after/safari/` |
-| 归档结论 | ✅ 收口 | I-6 与 D4-1-R 均有可复核证据；PRD 有效任务进度按监督人口径更新为22/28；全量代码冻结保持生效 |
+| 归档结论 | ✅ 收口 | I-6 与 D4-1-R 均有可复核证据；计入 D4-1-R 与 D5-1 后，PRD 有效任务进度校正为24/28；全量代码冻结保持生效 |
 
 **9/2（周三）· 部署上线**
 
@@ -449,6 +449,17 @@ Step 5  更新 docs/baseline.md 达成状态，写入当日日报               
 | D5-3 生产冒烟 | 监督人 + Codex | 5.4 清单 9 项逐项打勾（可脚本化项由 Codex 用 playwright/lighthouse CLI 执行） | 9/9 通过；任一失败 → 5.6 回滚 |
 | D5-4 预算台账 | 监督人 | DeepSeek 用量标注 50/100/135 元三级节点 | 台账就位 |
 | D5-5 文档收尾 | Codex | 更新 `docs/baseline.md` 对比目标状态 + 9/2 日报 | 文档更新完成 |
+
+**9/3–9/4 执行结果（2026-09-04 收尾更新）**
+
+| 任务 | 状态 | 结果与证据 |
+|---|---|---|
+| D5-2 环境变量 | ✅ 已完成 | `DEEPSEEK_API_KEY` 存在；`DEEPSEEK_MODEL=deepseek-v4-flash`；API URL留空；All deploy contexts；生产为Published |
+| D5-3 生产冒烟 | ✅ 9/9通过 | 初测发现聊天刷新崩溃与导航闭环两项P0，经A-6热修复提交`fbe8d00`后，监督人与Codex独立复验均通过；生产证据：`docs/evidence/production/` |
+| D5-4 预算台账 | ✅ 已完成 | 当前累计0.02元；50/100/135元三级节点已建立；总预算上限150元 |
+| D5-5 文档收尾 | ✅ 已完成 | 上线基线、9/3日报、主PRD状态与生产证据随本次`[D5-5]`提交归档 |
+| 有效任务进度 | ✅ 28/28 | 8/29后20/28，依次计入D4-2、D4-5、D4-1-R、D5-1、D5-2、D5-3、D5-4、D5-5，共28/28；停车场项不计入有效任务 |
+| 上线判定材料 | ✅ 满足条件 | 生产冒烟9/9、Lighthouse四项达标、真实AI回复与刷新持久化通过；正式上线结论由监督人确认 |
 
 **每日交付纪律（不变）**：
 1. 每日收工将进展、阻塞、次日计划写入 `docs/daily/YYYY-MM-DD.md`。

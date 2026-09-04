@@ -107,3 +107,16 @@
 ## ⚠️ 2026年8月31日已知性能问题
 
 - ⚠️移动端 LCP ≈3.3s（门槛 2.5s），M3 fail-fast 于 8/31 生效；优化候选：主包代码分割、createLucideIcon 121KB chunk 按页分割；排期 D5 后专项。
+
+## 🚀 2026年9月3日生产上线基线（2026年9月4日复验）
+
+- 🌐生产主域名为 `https://bondshift-demo.netlify.app/`，生产页面返回 HTTP 200。
+- 🔖生产代码对应 `main` 分支热修复提交 `fbe8d006e7b03a19296949a821d0bc65b8c38f8c`，本地 `HEAD`、`origin/main` 一致。
+- ✅最终门禁为 Lint 0 error / 0 warning；Build 成功，主 JavaScript 237.65KB、gzip 76.49KB；三套既有 e2e 3/3 PASS，聊天持久化与导航回归测试 PASS。
+- 📊生产移动端 Lighthouse 为 Performance 97、Accessibility 100、Best Practices 100、SEO 100；LCP 1.405s、CLS 0、FCP 1.369s、TBT 143ms。
+- ✅生产冒烟 9/9 通过：落地页与 Console、375/1440 导航、三道情景题至顾怀瑾90%首次相遇、DeepSeek真实回复、Function日志安全、刷新持久化、旧链接3/3重定向、Lighthouse、预算台账均通过。
+- 🤖Netlify 环境变量已确认：`DEEPSEEK_API_KEY` 存在且仅服务端使用，`DEEPSEEK_MODEL=deepseek-v4-flash`，`DEEPSEEK_API_URL` 留空，作用范围为 All deploy contexts。
+- 💰DeepSeek 用量台账基线为0.02元；50元为一级记录节点、100元为二级配置复核节点、135元为三级暂停新对话并上报节点，总预算上限150元。
+- 🩹生产冒烟曾发现刷新聊天页无限渲染与 `/match↔/chat` 导航闭环两项P0，已由 `[D5-HOTFIX]` 提交修复；9月4日独立复验确认刷新后3条会话消息仍在、DeepSeek接口HTTP 200、返回首页后换乘与报告均可达。
+- ⚠️8月31日本地受控 Lighthouse 的移动端 LCP ≈3.3s 仍作为历史已知问题保留；生产复测为1.405s，差异可能包含运行环境与测量噪声，不据此删除历史记录。
+- ⚠️聊天页返回按钮行为已改为 `/home`，但无障碍名称仍为“返回上一页”；该P2语义问题不阻塞上线，建议后续改为“返回首页”。

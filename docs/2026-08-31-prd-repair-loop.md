@@ -168,3 +168,22 @@
 1. **D4-5 设计 QA（白天任意时段，建议 R3 后）**：按 `docs/BONDSHIFT-UI-Design-Prompts.md` 第 8 章 10 项清单逐页过检（375/1440 截图已归档于 responsive/）；证据（截图+勾选记录）存 `docs/evidence/after/responsive/design-qa/`（新目录）；发现问题 → 转 Codex 按「仅样式修复」处理，每项一 commit。
 2. **冻结检查点（18:00）**：核对 R4 回报的复测总表——全绿 → 宣布页面级视觉冻结生效（9/1 18:00 前仍可调页面级视觉细节）；LCP 未绿 → 裁定 M3 fail-fast 范围并记 baseline.md。
 3. **Safari 15 手测四点**（若 8/30 晚未做）：100dvh / backdrop-filter / focus-visible / woff2 渲染，结果告知 Codex 记入 8/31 日报。
+
+---
+
+## 八、D5-3 生产冒烟 P0 热修复授权（A-6，2026-09-03 22:40 签发）
+
+**触发**：D5-3 生产冒烟发现两项 P0（Codex 异常即停，监督人独立复核属实）：
+
+| # | 问题 | 监督人复核证据 | 判定 |
+|---|---|---|---|
+| 1 | 刷新聊天页 → React `Maximum update depth exceeded` → 整页空白 | `docs/evidence/production/issues/chat-after-reload.png`（空白）vs `chat-before-reload.png`（正常）；根因 `src/pages/ChatPage.tsx` L48-50 selector 兜底 `?? []` 每次快照新引用，zustand v5（useSyncExternalStore）下 quickReplies 未持久化时触发无限更新循环 | ✅ P0 |
+| 2 | 聊天页返回 `navigate(-1)` + 隐藏全局导航 → `/match↔/chat` 闭环，无法到达换乘/报告页 | 同文件 L96、L111 两处 `navigate(-1)` | ✅ P0 |
+
+**A-6 窄豁免白名单**（超出即异常即停）：
+1. `src/pages/ChatPage.tsx` 修复 1：兜底空数组改模块级常量稳定引用；
+2. `src/pages/ChatPage.tsx` 修复 2：L96/L111 `navigate(-1)` → `navigate('/home')`；
+3. 新增 1 条回归测试（聊天→刷新→记录恢复→无错误→返回落 `/home` 可达换乘/报告页）；
+4. 门禁：lint + build + 三套 e2e + 新回归测试全绿后方可提交；
+5. 单 commit `[D5-HOTFIX]` 前缀；两份计划文档（`2026-09-03-day-plan*.md`）本次不提交、留待 D5-5 归档；
+6. push 至 main 须监督人（用户）明确确认后授权，push 后 Netlify 自动部署，生产复验原失败两项 + 冒烟 3/4/6 抽查。
